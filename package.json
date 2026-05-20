@@ -1,0 +1,23 @@
+{
+  "name": "zhuyun-manufacturing-saas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "/Users/daemon1/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node scripts/dev.js",
+    "dev:web": "/Users/daemon1/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173",
+    "dev:api": "/Users/daemon1/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node server/index.js",
+    "build": "/Users/daemon1/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node node_modules/vite/bin/vite.js build",
+    "start": "PORT=8787 /Users/daemon1/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node server/index.js",
+    "preview": "/Users/daemon1/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node node_modules/vite/bin/vite.js preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "vite": "^7.2.7",
+    "typescript": "^5.9.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "lucide-react": "^0.561.0"
+  },
+  "devDependencies": {}
+}
