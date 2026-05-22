@@ -1,26 +1,45 @@
 {
-  "name": "zhuyun-manufacturing-saas",
-  "version": "0.2.0",
+  "name": "blacklake-saas",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "dev:web": "vite --host 127.0.0.1 --port 5173",
-    "dev:api": "node server/index.js",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:web": "vite --host 0.0.0.0 --port 5173",
+    "dev:api": "node --watch server/app.js",
     "build": "vite build",
-    "start": "PORT=8787 node server/index.js",
-    "preview": "vite preview --host 127.0.0.1"
+    "start": "node server/app.js",
+    "db:migrate": "npx prisma migrate dev",
+    "db:seed": "node server/prisma/seed.js",
+    "db:generate": "npx prisma generate"
   },
   "dependencies": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "lucide-react": "^0.561.0"
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.1",
+    "antd": "^5.25.3",
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/charts": "^2.5.1",
+    "zustand": "^5.0.5",
+    "dayjs": "^1.11.13",
+    "axios": "^1.9.0",
+    "fastify": "^5.3.3",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/static": "^8.1.0",
+    "@fastify/jwt": "^9.0.0",
+    "@prisma/client": "^6.9.0",
+    "bcryptjs": "^3.0.2"
   },
   "devDependencies": {
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^5.1.1",
     "typescript": "^5.9.3",
-    "vite": "^7.2.7"
+    "vite": "^7.2.7",
+    "prisma": "^6.9.0",
+    "concurrently": "^9.1.2"
+  },
+  "prisma": {
+    "schema": "server/prisma/schema.prisma"
   }
 }

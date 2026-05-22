@@ -3,15 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>工脉智造 MES | 云端制造执行系统</title>
-    <meta
-      name="description"
-      content="工脉智造 MES 是一套云端制造执行系统原型，覆盖官网导购、角色登录、生产执行、质量追溯、物料协同和组织权限后台。"
-    />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23f7f4e8'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-size='25' font-family='Georgia' font-weight='800' fill='%23101816'%3EGM%3C/text%3E%3C/svg%3E" />
+    <title>白云智造 | 云端制造协同平台</title>
+    <meta name="description" content="白云智造是新一代云端制造协同平台，覆盖 MES、QMS、WMS、APS 全链条，助力工厂数字化转型。" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2302b980'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='24' font-family='system-ui' font-weight='900' fill='white'%3EBY%3C/text%3E%3C/svg%3E" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      window.onerror = function(msg, url, line, col, err) {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:16px;background:#ff4d4f;color:#fff;font-size:14px;z-index:99999;font-family:monospace;white-space:pre-wrap';
+        d.textContent = 'JS Error: ' + msg + '\n' + (url||'') + ':' + line + ':' + col + '\n' + (err&&err.stack||'');
+        document.body.appendChild(d);
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:16px;background:#fa8c16;color:#fff;font-size:14px;z-index:99999;font-family:monospace;white-space:pre-wrap';
+        d.textContent = 'Unhandled Promise: ' + (e.reason&&e.reason.stack||e.reason||'unknown');
+        document.body.appendChild(d);
+      });
+    </script>
   </body>
 </html>

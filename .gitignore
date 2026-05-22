@@ -6,3 +6,6 @@ data/*.sqlite-*
 *.log
 screenshot-*.png
 debug-page.png
+.env
+.env.local
+.env.*.local

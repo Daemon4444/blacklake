@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id     String @id
+  name   String
+  plan   String
+  plants Int
+  lines  Int
+  users  Int
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("tenants")
+}
+
+model User {
+  id          String   @id
+  name        String
+  email       String   @default("")
+  password    String   @default("")
+  role        String
+  roleKey     String   @map("role_key")
+  department  String   @default("")
+  title       String   @default("")
+  plant       String   @default("")
+  status      String   @default("离线")
+  lastActive  String   @default("") @map("last_active")
+  permissions String[]
+  tenantId    String?  @map("tenant_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  @@map("users")
+}
+
+model WorkOrder {
+  id       String @id
+  customer String
+  sku      String
+  line     String
+  due      String
+  priority String
+  status   String
+  progress Int    @default(0)
+  blockers String[] @default([])
+  tenantId String? @map("tenant_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("work_orders")
+}
+
+model Line {
+  id     String @id
+  name   String
+  plant  String
+  status String
+  oee    Int    @default(0)
+  load   Int    @default(0)
+  tenantId String? @map("tenant_id")
+  @@map("lines")
+}
+
+model Material {
+  id           String   @id
+  name         String
+  stock        Int      @default(0)
+  safeStock    Int      @default(0) @map("safe_stock")
+  location     String   @default("")
+  linkedOrders String[] @default([]) @map("linked_orders")
+  tenantId     String?  @map("tenant_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  @@map("materials")
+}
+
+model QualityIssue {
+  id        String @id
+  batch     String
+  severity  String
+  source    String
+  owner     String
+  status    String
+  rootCause String @map("root_cause")
+  tenantId  String? @map("tenant_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("quality_issues")
+}
+
+model EquipmentAsset {
+  id              String   @id
+  name            String
+  line            String
+  plant           String
+  status          String
+  health          Int      @default(100)
+  oee             Int      @default(0)
+  temperature     Int      @default(25)
+  vibration       Float    @default(0)
+  nextMaintenance String   @default("") @map("next_maintenance")
+  owner           String   @default("")
+  sensors         String[] @default([])
+  tenantId        String?  @map("tenant_id")
+  @@map("equipment_assets")
+}
+
+model ProcessRoute {
+  id        String @id
+  product   String
+  version   String
+  line      String
+  owner     String
+  cycleTime String @map("cycle_time")
+  qrCode    String @map("qr_code")
+  status    String
+  bom       Json   @default("[]")
+  steps     Json   @default("[]")
+  tenantId  String? @map("tenant_id")
+  @@map("process_routes")
+}
+
+model KanbanBoard {
+  id            String   @id
+  name          String
+  audience      String
+  scope         String
+  refreshRate   String   @map("refresh_rate")
+  layout        String
+  owner         String
+  status        String
+  lastPublished String   @default("") @map("last_published")
+  widgets       String[] @default([])
+  tenantId      String?  @map("tenant_id")
+  @@map("kanban_boards")
+}
+
+model CommercialPackage {
+  id             String   @id
+  name           String
+  target         String
+  priceModel     String   @map("price_model")
+  scope          String
+  implementation String
+  roi            String
+  status         String
+  modules        String[] @default([])
+  @@map("commercial_packages")
+}
+
+model SalesOpportunity {
+  id        String @id
+  packageId String @map("package_id")
+  customer  String
+  owner     String
+  stage     String
+  nextStep  String @map("next_step")
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("sales_opportunities")
+}
+
+model ActivationTask {
+  id            String @id
+  role          String
+  owner         String
+  workspace     String
+  firstAction   String @map("first_action")
+  successMetric String @map("success_metric")
+  status        String
+  @@map("activation_tasks")
+}
+
+model MasterDataCheck {
+  id        String @id
+  domain    String
+  owner     String
+  source    String
+  readiness Int    @default(0)
+  issues    Int    @default(0)
+  status    String
+  @@map("master_data_checks")
+}
+
+model Event {
+  id        String   @id
+  time      String
+  type      String
+  message   String
+  actor     String   @default("系统")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("events")
+}
+
+model AuditLog {
+  id         String   @id
+  actor      String
+  action     String
+  entity     String
+  beforeJson Json?    @map("before_json")
+  afterJson  Json?    @map("after_json")
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@map("audit_logs")
+}
+
+model Recommendation {
+  id       String  @id
+  severity String
+  title    String
+  body     String
+  impact   String
+  accepted Boolean @default(false)
+  @@map("recommendations")
+}
+
+model IntelligenceInsight {
+  id             String @id
+  title          String
+  domain         String
+  severity       String
+  metric         String
+  value          String
+  change         String
+  source         String
+  linkedEntity   String @map("linked_entity")
+  recommendation String
+  owner          String
+  status         String
+  @@map("intelligence_insights")
+}
+
+model Rule {
+  id        String  @id
+  name      String
+  module    String
+  enabled   Boolean @default(true)
+  threshold String  @default("")
+  @@map("rules")
+}
+
+model Integration {
+  id       String @id
+  name     String
+  type     String
+  status   String
+  lastSync String @default("") @map("last_sync")
+  @@map("integrations")
+}
+
+model ImplementationPhase {
+  id        String @id
+  name      String
+  owner     String
+  time      String
+  status    String
+  detail    String @default("")
+  sortOrder Int    @default(0) @map("sort_order")
+  @@map("implementation_phases")
+}
+
+model MobileTask {
+  id          String @id
+  type        String
+  title       String
+  target      String
+  scanCode    String @map("scan_code")
+  owner       String
+  status      String
+  instruction String @default("")
+  @@map("mobile_tasks")
+}
+
+model IndustryTemplate {
+  id       String   @id
+  name     String
+  industry String
+  fit      String
+  modules  String[] @default([])
+  roles    String[] @default([])
+  fields   String[] @default([])
+  rollout  String   @default("")
+  status   String
+  @@map("industry_templates")
+}
+
+model WorkflowInstance {
+  id          String   @id
+  name        String
+  category    String
+  businessKey String   @map("business_key")
+  owner       String
+  sla         String
+  currentStep Int      @default(0) @map("current_step")
+  status      String
+  steps       String[] @default([])
+  route       String   @default("")
+  @@map("workflow_instances")
+}
