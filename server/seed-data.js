@@ -450,15 +450,15 @@ export const seed = {
     { id: "M-335", name: "压装弹簧", stock: 260, safeStock: 360, location: "WH-D-04", linkedOrders: ["WO-61928"] },
   ],
   qualityIssues: [
-    { id: "Q-2031", batch: "BL-2031", severity: "高", source: "首件检验", owner: "质检组 A", status: "处理中", rootCause: "灌装扭矩波动超阈值" },
-    { id: "Q-2037", batch: "BL-2037", severity: "中", source: "巡检", owner: "包装班组", status: "待处理", rootCause: "标签偏移 2.1mm" },
-    { id: "Q-1984", batch: "BL-1984", severity: "低", source: "客户投诉", owner: "售后质量", status: "已关闭", rootCause: "运输外箱破损" },
+    { id: "Q-2031", batch: "GM-2031", severity: "高", source: "首件检验", owner: "质检组 A", status: "处理中", rootCause: "灌装扭矩波动超阈值" },
+    { id: "Q-2037", batch: "GM-2037", severity: "中", source: "巡检", owner: "包装班组", status: "待处理", rootCause: "标签偏移 2.1mm" },
+    { id: "Q-1984", batch: "GM-1984", severity: "低", source: "客户投诉", owner: "售后质量", status: "已关闭", rootCause: "运输外箱破损" },
   ],
   events: [
     { id: "E-1", time: "09:42", type: "生产", message: "L2 完成 WO-61891 首件确认，等待包材补齐" },
     { id: "E-2", time: "09:30", type: "库存", message: "M-884 到货 240 件，仍低于安全库存" },
     { id: "E-3", time: "09:18", type: "计划", message: "系统识别 L3 有 44% 可用产能，可承接 WO-61872" },
-    { id: "E-4", time: "09:05", type: "质量", message: "Q-2031 进入偏差复核，关联批次 BL-2031" },
+    { id: "E-4", time: "09:05", type: "质量", message: "Q-2031 进入偏差复核，关联批次 GM-2031" },
   ],
   recommendations: [
     {
@@ -588,7 +588,7 @@ export const seed = {
       type: "质检",
       title: "Q-2037 标签偏移巡检确认",
       target: "Q-2037",
-      scanCode: "BL-2037",
+      scanCode: "GM-2037",
       owner: "质检组 A",
       status: "待执行",
       instruction: "扫码批次，确认复检结果并关闭低风险质量任务。",

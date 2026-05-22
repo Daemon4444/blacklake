@@ -1,222 +1,171 @@
 import {
-  Activity,
   AlertTriangle,
+  ArrowRight,
   BadgeCheck,
-  BellRing,
+  BarChart3,
   Boxes,
   BrainCircuit,
-  Calculator,
-  CalendarClock,
-  ChevronRight,
   CheckCircle2,
   ClipboardCheck,
-  ClipboardList,
   Database,
   Factory,
   FileClock,
-  GitPullRequestArrow,
-  GitBranch,
-  HardDrive,
+  Gauge,
   KeyRound,
   Layers3,
-  LayoutDashboard,
   LineChart,
   LogOut,
-  LucideIcon,
   PackageCheck,
   Play,
   PlugZap,
-  RadioTower,
   RefreshCw,
-  Rocket,
   Route,
   ScanLine,
   Search,
   Settings2,
   ShieldCheck,
-  ShoppingCart,
-  Sparkles,
   Smartphone,
-  ServerCog,
+  Sparkles,
+  TimerReset,
+  Truck,
+  UserCog,
   Users,
   Wrench,
 } from "lucide-react";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  AuditLog,
-  ActivationTask,
   CommercialPackage,
   Employee,
-  EquipmentAsset,
   EventItem,
-  ImplementationPhase,
-  IndustryTemplate,
   Integration,
-  IntelligenceInsight,
-  KanbanBoard,
-  Line,
   Material,
-  MasterDataCheck,
-  MobileTask,
-  ProcessRoute,
   QualityIssue,
   Recommendation,
-  Rule,
-  SalesOpportunity,
   Snapshot,
   ViewKey,
   WorkOrder,
-  WorkflowInstance,
 } from "./data";
 
-const navItems: { key: ViewKey; label: string; icon: LucideIcon }[] = [
-  { key: "command", label: "总览工作台", icon: LayoutDashboard },
-  { key: "commercial", label: "商业化官网", icon: Rocket },
-  { key: "onboarding", label: "客户启动", icon: BadgeCheck },
-  { key: "planning", label: "订单排程", icon: Route },
-  { key: "execution", label: "生产执行", icon: Play },
-  { key: "kanban", label: "看板中心", icon: LayoutDashboard },
-  { key: "mobile", label: "移动现场", icon: Smartphone },
-  { key: "quality", label: "质量闭环", icon: ClipboardCheck },
-  { key: "inventory", label: "物料库存", icon: Boxes },
-  { key: "mrp", label: "主计划 MRP", icon: CalendarClock },
-  { key: "procurement", label: "采购供应商", icon: ShoppingCart },
-  { key: "costing", label: "成本财务", icon: Calculator },
-  { key: "model", label: "工厂模型", icon: GitBranch },
-  { key: "routes", label: "工艺路线", icon: ClipboardList },
-  { key: "equipment", label: "设备资源", icon: Wrench },
-  { key: "intelligence", label: "数据智能", icon: LineChart },
-  { key: "agent", label: "工业智能体", icon: BrainCircuit },
-  { key: "rules", label: "规则配置", icon: Settings2 },
-  { key: "templates", label: "配置模板", icon: Layers3 },
-  { key: "workflow", label: "流程引擎", icon: GitPullRequestArrow },
-  { key: "integrations", label: "开放集成", icon: PlugZap },
-  { key: "audit", label: "审计日志", icon: FileClock },
-  { key: "database", label: "系统数据库", icon: Database },
-  { key: "implementation", label: "实施蓝图", icon: Rocket },
+type Surface = "home" | "command" | "fulfillment" | "shopfloor" | "quality" | "materials" | "implementation" | "platform" | "admin";
+type RoleKey = "coo" | "planner" | "production" | "quality" | "warehouse" | "it";
+
+const surfaces: { key: Surface; label: string; icon: typeof Factory }[] = [
+  { key: "home", label: "商业首页", icon: Factory },
+  { key: "command", label: "经营总览", icon: Gauge },
+  { key: "fulfillment", label: "订单履约", icon: Route },
+  { key: "shopfloor", label: "移动现场", icon: Smartphone },
+  { key: "quality", label: "质量追溯", icon: ClipboardCheck },
+  { key: "materials", label: "物料供应", icon: Boxes },
+  { key: "implementation", label: "上线实施", icon: BadgeCheck },
+  { key: "platform", label: "平台能力", icon: PlugZap },
+  { key: "admin", label: "组织权限", icon: UserCog },
 ];
 
-type RoleKey = "coo" | "planner" | "production" | "quality" | "warehouse" | "procurement" | "equipment" | "finance" | "it";
-
-type RoleProfile = {
-  key: RoleKey;
-  label: string;
-  buyer: string;
-  mission: string;
-  success: string;
-  firstActions: { label: string; detail: string; view: ViewKey }[];
+const roleFocus: Record<RoleKey, { name: string; mission: string; primary: Surface }> = {
+  coo: { name: "经营层", mission: "看准交、库存、质量、产能和多厂复制风险", primary: "command" },
+  planner: { name: "计划员", mission: "把订单、产能、物料、质量约束放进同一张计划表", primary: "fulfillment" },
+  production: { name: "生产现场", mission: "用扫码报工和异常回写让车间进度实时在线", primary: "shopfloor" },
+  quality: { name: "质量团队", mission: "围绕批次、工序、检验点和责任人完成偏差闭环", primary: "quality" },
+  warehouse: { name: "仓储物料", mission: "以工单齐套为中心处理发料、退料、补货和盘点", primary: "materials" },
+  it: { name: "IT/实施", mission: "配置主数据、接口、权限、审计和多厂复制模板", primary: "admin" },
 };
 
-const roleProfiles: RoleProfile[] = [
+const mesModules = [
+  "生产统计",
+  "物料管理",
+  "工艺路线",
+  "设备管理",
+  "故障管理",
+  "质量管理",
+  "工位管理",
+  "产线管理",
+  "计划排程",
+  "BOM 管理",
+  "工序管理",
+  "模具管理",
+  "预警管理",
+  "二维码管理",
+  "车间管理",
+];
+
+const dashboardShots = [
   {
-    key: "coo",
-    label: "COO / 工厂总经理",
-    buyer: "经营层",
-    mission: "跨工厂看交付、库存、质量与产能风险，确认需要管理层介入的动作。",
-    success: "准交率、产能利用率、库存周转、异常关闭时长",
-    firstActions: [
-      { label: "看今日红线", detail: "从准交、缺料、质量和产线负载判断经营风险。", view: "command" },
-      { label: "看商业 ROI", detail: "理解首厂试点、多厂复制和集团运营的商业价值。", view: "commercial" },
-      { label: "启动首厂上线", detail: "确认角色启用、主数据准备度和实施路径。", view: "onboarding" },
-    ],
+    title: "生产看板",
+    body: "车间生产状况实时把握",
+    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/1%E7%94%9F%E4%BA%A7%E7%9C%8B%E6%9D%BF.png",
   },
   {
-    key: "planner",
-    label: "计划员",
-    buyer: "供应链计划",
-    mission: "把订单、产能、物料和质量约束放到同一张计划工作台，处理例外并冻结计划。",
-    success: "计划响应速度、齐套率、产能冲突数、延期风险",
-    firstActions: [
-      { label: "处理订单风险", detail: "查看阻塞工单、交期、客户优先级和排程建议。", view: "planning" },
-      { label: "查看预测洞察", detail: "识别准交、库存和产能的提前预警。", view: "intelligence" },
-      { label: "核对工艺约束", detail: "确认 BOM、工序、SOP 与产线能力是否匹配。", view: "routes" },
-    ],
+    title: "质量看板",
+    body: "批次、检验点、异常闭环统一追溯",
+    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/2%E8%B4%A8%E9%87%8F%E7%9C%8B%E6%9D%BF.png",
   },
   {
-    key: "production",
-    label: "生产主管 / 班组长",
-    buyer: "车间生产",
-    mission: "接收派工、推进报工、处理现场异常，让真实进度回到计划层。",
-    success: "报工及时率、工单进度准确率、停线时长、换线效率",
-    firstActions: [
-      { label: "移动扫码报工", detail: "用手机或 PDA 扫工单并回写现场进度。", view: "mobile" },
-      { label: "查看现场大屏", detail: "按班组关注派工、节拍、设备告警和待料。", view: "kanban" },
-      { label: "查看工艺 SOP", detail: "按产品二维码进入工序、质检点和作业指导。", view: "routes" },
-    ],
+    title: "物料看板",
+    body: "库存、齐套、发料和安全库存同步协同",
+    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/3%E7%89%A9%E6%96%99%E7%9C%8B%E6%9D%BF.png",
   },
   {
-    key: "quality",
-    label: "质量经理 / 质检员",
-    buyer: "质量管理",
-    mission: "围绕批次、工序、检验点和责任人完成偏差闭环与追溯。",
-    success: "一次合格率、偏差关闭时长、追溯完整率、质量成本",
-    firstActions: [
-      { label: "移动质检确认", detail: "扫码批次并把复检结果写入追溯链。", view: "mobile" },
-      { label: "追溯工厂模型", detail: "定位产线、设备、质检中心与仓储对象。", view: "model" },
-      { label: "复核质量规则", detail: "确认质量阈值、升级策略和审计链路。", view: "rules" },
-    ],
+    title: "设备看板",
+    body: "点检、保养、停机和产能影响即时可见",
+    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/4%E8%AE%BE%E5%A4%87%E7%9C%8B%E6%9D%BF.png",
   },
   {
-    key: "warehouse",
-    label: "仓库 / 物料员",
-    buyer: "仓储物流",
-    mission: "以工单齐套为中心处理备料、发料、退料、低库存和盘点。",
-    success: "库存准确率、缺料次数、备料及时率、库位周转",
-    firstActions: [
-      { label: "移动扫码发料", detail: "扫描库位与物料，把发料结果同步到库存。", view: "mobile" },
-      { label: "生成补货", detail: "把低库存转换为采购或调拨建议。", view: "mrp" },
-      { label: "同步 WMS", detail: "检查仓储接口与库存事件是否正常。", view: "integrations" },
-    ],
+    title: "移动现场",
+    body: "手机端扫码报工、质检、收发料和异常上报",
+    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/5%E6%94%AF%E6%8C%81%E6%89%8B%E6%9C%BAapp.png",
+  },
+];
+
+const scenarioSections = [
+  {
+    id: "质量管理",
+    eyebrow: "Quality Traceability",
+    title: "质量问题不是事后登记，而是卡在工序现场闭环",
+    body: "把来料检、首检、巡检、终检和客诉追溯接到批次、工单、工序、设备与责任人。质量员可以在移动端发起偏差、隔离批次、要求返工，经营层能看到未闭环问题对交付的影响。",
+    image: "https://files.blacklake.cn/ow-images/zhuanti/180808/2%E8%B4%A8%E9%87%8F%E7%9C%8B%E6%9D%BF.png",
+    facts: ["检验点配置", "批次追溯", "偏差闭环", "客诉关联"],
   },
   {
-    key: "procurement",
-    label: "采购员",
-    buyer: "采购供应",
-    mission: "把 MRP 缺口变成采购申请，并跟踪供应商交期、价格与质量风险。",
-    success: "供应准时率、采购提前期、价格差异、供应异常响应",
-    firstActions: [
-      { label: "处理采购建议", detail: "从 MRP 缺料例外进入供应建议。", view: "mrp" },
-      { label: "确认供应商", detail: "查看供应商评分、风险和采购申请入口。", view: "procurement" },
-      { label: "同步 ERP", detail: "把采购、成本和库存交易同步到外部系统。", view: "integrations" },
-    ],
+    id: "设备管理",
+    eyebrow: "Equipment Operations",
+    title: "设备、模具、点检和停机原因进入同一张运行账",
+    body: "设备工程师维护资产台账、保养计划、故障记录和停机影响；班组在报工时同步记录设备状态。系统把设备可用性和产线计划放在一起，让排产不再只看人和物料。",
+    image: "https://files.blacklake.cn/ow-images/zhuanti/180808/4%E8%AE%BE%E5%A4%87%E7%9C%8B%E6%9D%BF.png",
+    facts: ["资产台账", "点检保养", "停机影响", "OEE 分析"],
   },
   {
-    key: "equipment",
-    label: "设备工程师",
-    buyer: "设备与资源",
-    mission: "看设备健康、IoT 指标、点检保养和产线影响，把设备异常闭环到生产计划。",
-    success: "OEE、MTBF、MTTR、计划保养完成率",
-    firstActions: [
-      { label: "查看设备健康", detail: "按产线查看设备状态、健康分和传感器指标。", view: "equipment" },
-      { label: "维护工厂模型", detail: "确认设备、工位、产线和权限关系。", view: "model" },
-      { label: "推进设备流程", detail: "将点检保养与生产变更流程联动。", view: "workflow" },
-    ],
+    id: "物料管理",
+    eyebrow: "Material Collaboration",
+    title: "围绕工单齐套管理物料，而不是只看仓库库存",
+    body: "计划创建工单后，仓储按批次和库位发料，现场扫码领料、退料、补料，系统自动提示缺料风险和安全库存。物料动作与工单进度相互校验，减少等料和错料。",
+    image: "https://files.blacklake.cn/ow-images/zhuanti/180808/3%E7%89%A9%E6%96%99%E7%9C%8B%E6%9D%BF.png",
+    facts: ["齐套检查", "批次库位", "发退补料", "安全库存"],
   },
-  {
-    key: "finance",
-    label: "财务 / 成本会计",
-    buyer: "财务成本",
-    mission: "把报工、耗料、采购价差、质量损失汇总为 WIP 与成本差异。",
-    success: "成本差异率、关账时长、凭证一致性、质量成本",
-    firstActions: [
-      { label: "查看成本差异", detail: "检查 WIP、待过账报工和质量成本事件。", view: "costing" },
-      { label: "看经营指标", detail: "关注成本、交付、库存和质量指标趋势。", view: "intelligence" },
-      { label: "复核审计", detail: "查看生产、库存、质量、接口动作记录。", view: "audit" },
-    ],
-  },
-  {
-    key: "it",
-    label: "IT / 实施顾问",
-    buyer: "信息化与实施",
-    mission: "配置租户、权限、工厂模型、接口和上线阶段，保证系统可复制交付。",
-    success: "上线周期、接口成功率、权限合规、扩厂复制速度",
-    firstActions: [
-      { label: "检查上线蓝图", detail: "跟踪诊断、主数据、接口、试点和验收。", view: "implementation" },
-      { label: "生成售前方案", detail: "把套餐、行业包、ROI 和实施路径转为商机。", view: "commercial" },
-      { label: "转入客户启动", detail: "把商机、角色、主数据和接口变成上线任务。", view: "onboarding" },
-      { label: "配置运营看板", detail: "发布角色化看板、投屏布局和刷新策略。", view: "kanban" },
-    ],
-  },
+];
+
+const guideSteps = [
+  { title: "注册企业租户", body: "创建公司、工厂、车间、产线和数据隔离空间。", icon: Factory },
+  { title: "导入员工组织", body: "从 HR/企微/飞书导入员工，按部门、工厂、班组分组。", icon: Users },
+  { title: "选择岗位角色", body: "计划、生产、质量、仓储、经营层、IT 分别进入不同工作台。", icon: UserCog },
+  { title: "配置操作权限", body: "控制谁能报工、补货、关闭偏差、同步接口、查看审计。", icon: ShieldCheck },
+  { title: "进入生产系统", body: "角色登录后直接进入对应业务流程，动作进入事件流和审计。", icon: ArrowRight },
+];
+
+const dataChainSteps = [
+  { title: "销售订单", body: "客户交期、优先级、产品规格进入统一订单池。", icon: Truck },
+  { title: "计划排程", body: "结合产能、工艺、物料和质量约束自动识别冲突。", icon: Route },
+  { title: "物料齐套", body: "按工单、批次、库位发料，低库存自动触发补货。", icon: Boxes },
+  { title: "现场执行", body: "班组扫码报工，异常、停机、返工实时回写。", icon: ScanLine },
+  { title: "质量追溯", body: "检验点、批次、设备和责任人共同构成追溯链。", icon: ClipboardCheck },
+  { title: "经营看板", body: "经营层看到准交、库存、质量和产线负载风险。", icon: LineChart },
+  { title: "审计归档", body: "每次配置、审批和业务动作保留可复盘记录。", icon: FileClock },
+];
+
+const faqItems = [
+  ["这类 MES 怎么售卖？", "以首厂试点为入口，按企业租户、启用模块、工厂/产线规模和实施服务打包。试点跑通后沉淀模板，再复制到多工厂和上下游协同网络。"],
+  ["为什么要做角色导购？", "MES 的购买者和使用者不是同一人。经营层看 ROI，IT 看权限与接口，计划、生产、质量、仓储关心每日动作。导购页需要把这些入口直接连到工作台。"],
+  ["和传统项目制软件的差异？", "云端产品强调配置、移动现场、快速上线和持续迭代；传统项目更多依赖长周期定制。这里的原型把配置、权限、流程和业务动作放在同一条链路里。"],
+  ["后台管理必须包含什么？", "至少要有企业租户、组织员工、角色权限、工厂范围、主数据、接口状态和审计日志，否则官网注册之后无法进入一个可信的生产系统。"],
 ];
 
 async function request<T>(path: string, userId: string, options?: RequestInit): Promise<T> {
@@ -229,1969 +178,1389 @@ async function request<T>(path: string, userId: string, options?: RequestInit): 
 }
 
 function App() {
-  const [activeView, setActiveView] = useState<ViewKey>("command");
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [search, setSearch] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [surface, setSurface] = useState<Surface>("home");
+  const [showSite, setShowSite] = useState(true);
+  const [userId, setUserId] = useState(() => localStorage.getItem("gongmai-user-id") || "U-1001");
+  const [authenticated, setAuthenticated] = useState(() => localStorage.getItem("gongmai-session") === "active");
+  const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [activeRole, setActiveRole] = useState<RoleKey>("planner");
-  const [activeUserId, setActiveUserId] = useState(() => localStorage.getItem("zhuyun-user-id") || "U-1001");
-  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("zhuyun-session") === "active");
+  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
-  async function refresh() {
-    const next = await request<Snapshot>("/api/snapshot", activeUserId);
+  async function refresh(nextUserId = userId) {
+    const next = await request<Snapshot>("/api/snapshot", nextUserId);
     setSnapshot(next);
-    setActiveRole((next.currentUser.roleKey as RoleKey) || "planner");
   }
 
-  async function mutate(path: string, actionLabel: string) {
-    setBusyAction(actionLabel);
+  async function login(nextUserId: string, password = "demo123") {
+    setBusy(nextUserId);
     try {
-      const next = await request<Snapshot>(path, activeUserId, { method: "POST", body: "{}" });
+      const next = await request<Snapshot>("/api/auth/login", nextUserId, {
+        method: "POST",
+        body: JSON.stringify({ userId: nextUserId, password }),
+      });
+      localStorage.setItem("gongmai-user-id", nextUserId);
+      localStorage.setItem("gongmai-session", "active");
+      setUserId(nextUserId);
       setSnapshot(next);
-      setActiveRole((next.currentUser.roleKey as RoleKey) || "planner");
-      setError(null);
-      setNotice("操作已写入系统，并同步到事件流与审计日志");
-      window.setTimeout(() => setNotice(null), 2600);
+      setAuthenticated(true);
+      setShowSite(false);
+      setSurface(roleFocus[(next.currentUser.roleKey as RoleKey) || "planner"]?.primary || "command");
+      toast(`${next.currentUser.name} 已进入 ${next.tenant.name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "登录失败");
+      setAuthenticated(false);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function mutate(path: string, label: string) {
+    setBusy(label);
+    try {
+      const next = await request<Snapshot>(path, userId, { method: "POST", body: "{}" });
+      setSnapshot(next);
+      toast("动作已写入事件流、业务对象和审计日志");
     } catch (err) {
       setError(err instanceof Error ? err.message : "操作失败");
     } finally {
-      setBusyAction(null);
+      setBusy(null);
     }
   }
 
-  async function loginAs(userId: string, password = "demo123") {
-    setBusyAction(userId);
-    try {
-      localStorage.setItem("zhuyun-user-id", userId);
-      setActiveUserId(userId);
-      const next = await request<Snapshot>("/api/auth/login", userId, { method: "POST", body: JSON.stringify({ userId, password }) });
-      setSnapshot(next);
-      setActiveRole((next.currentUser.roleKey as RoleKey) || "planner");
-      localStorage.setItem("zhuyun-session", "active");
-      setIsAuthenticated(true);
-      setError(null);
-      setNotice(`${next.currentUser.name} 已登录，后端会按该员工写入协同事件与审计`);
-      window.setTimeout(() => setNotice(null), 2600);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败");
-      setIsAuthenticated(false);
-    } finally {
-      setBusyAction(null);
-    }
+  function toast(message: string) {
+    setNotice(message);
+    setError(null);
+    window.setTimeout(() => setNotice(null), 2600);
   }
 
   function logout() {
-    localStorage.removeItem("zhuyun-session");
-    setIsAuthenticated(false);
-    setActiveView("command");
-    setNotice(null);
+    localStorage.removeItem("gongmai-session");
+    setAuthenticated(false);
+    setShowSite(true);
+    setSurface("home");
   }
 
   useEffect(() => {
     refresh().catch((err) => setError(err.message));
-    if (!isAuthenticated) return undefined;
-    const stream = new EventSource(`/api/events/stream?userId=${activeUserId}`);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!authenticated) return undefined;
+    const stream = new EventSource(`/api/events/stream?userId=${userId}`);
     stream.onmessage = () => refresh().catch(() => undefined);
     stream.onerror = () => stream.close();
     return () => stream.close();
-  }, [activeUserId, isAuthenticated]);
+  }, [authenticated, userId]);
 
-  const metrics = useMemo(() => {
-    if (!snapshot) return [];
-    const riskyOrders = snapshot.orders.filter((order) => order.status === "风险" || order.status === "阻塞").length;
-    const avgProgress = Math.round(snapshot.orders.reduce((sum, order) => sum + order.progress, 0) / snapshot.orders.length);
-    const lowStock = snapshot.materials.filter((item) => item.stock < item.safeStock).length;
-    const openQuality = snapshot.qualityIssues.filter((issue) => issue.status !== "已关闭").length;
-    return [
-      { label: "准交预测", value: `${Math.max(82, 98 - riskyOrders * 3)}%`, tone: "green" },
-      { label: "工单平均进度", value: `${avgProgress}%`, tone: "blue" },
-      { label: "缺料风险", value: `${lowStock} 项`, tone: lowStock > 0 ? "amber" : "green" },
-      { label: "质量待闭环", value: `${openQuality} 单`, tone: openQuality > 0 ? "red" : "green" },
-    ];
-  }, [snapshot]);
+  const actions = {
+    planPackage: (id: string) => mutate(`/api/commercial/${id}/plan`, id),
+    convert: (id: string) => mutate(`/api/opportunities/${id}/convert`, id),
+    executeRecommendation: (id: string) => mutate(`/api/recommendations/${id}/execute`, id),
+    advanceOrder: (id: string) => mutate(`/api/orders/${id}/advance`, id),
+    closeQuality: (id: string) => mutate(`/api/quality/${id}/close`, id),
+    replenish: (id: string) => mutate(`/api/materials/${id}/replenish`, id),
+    completeMobile: (id: string) => mutate(`/api/mobile/${id}/complete`, id),
+    verifyMasterData: (id: string) => mutate(`/api/master-data/${id}/verify`, id),
+    syncIntegration: (id: string) => mutate(`/api/integrations/${id}/sync`, id),
+    reset: () => mutate("/api/admin/reset", "reset"),
+    exception: () => mutate("/api/events/exception", "exception"),
+  };
 
-  const filteredOrders = useMemo(() => {
-    if (!snapshot) return [];
-    const keyword = search.trim().toLowerCase();
-    if (!keyword) return snapshot.orders;
-    return snapshot.orders.filter((order) =>
-      [order.id, order.customer, order.sku, order.line, order.status].some((field) => field.toLowerCase().includes(keyword)),
-    );
-  }, [snapshot, search]);
-
-  const currentRole = roleProfiles.find((role) => role.key === activeRole) || roleProfiles[0];
-
-  if (!snapshot) {
+  if (!snapshot) return <Boot message={error || "正在连接云端制造协同平台..."} />;
+  if (showSite || !authenticated) {
     return (
-      <div className="boot-screen">
-        <div className="brand-mark">Z</div>
-        <strong>正在连接制造协同平台</strong>
-        <span>{error || "加载租户、权限、生产数据与实时事件流..."}</span>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <LoginScreen
+      <MesLanding
         snapshot={snapshot}
-        activeUserId={activeUserId}
-        busyAction={busyAction}
-        error={error}
-        onLogin={loginAs}
-        onSelectUser={setActiveUserId}
+        selectedUserId={userId}
+        busy={busy}
+        onSelectUser={setUserId}
+        onLogin={() => login(userId)}
+        onEnterConsole={() => {
+          setShowSite(false);
+          setSurface(roleFocus[(snapshot.currentUser.roleKey as RoleKey) || "planner"]?.primary || "command");
+        }}
       />
     );
   }
 
-  const api = {
-    executeRecommendation: (id: string) => mutate(`/api/recommendations/${id}/execute`, id),
-    createCommercialPlan: (id: string) => mutate(`/api/commercial/${id}/plan`, id),
-    convertOpportunity: (id: string) => mutate(`/api/opportunities/${id}/convert`, id),
-    completeActivation: (id: string) => mutate(`/api/activation/${id}/complete`, id),
-    verifyMasterData: (id: string) => mutate(`/api/master-data/${id}/verify`, id),
-    advanceWorkflow: (id: string) => mutate(`/api/workflows/${id}/advance`, id),
-    advanceOrder: (id: string) => mutate(`/api/orders/${id}/advance`, id),
-    closeQuality: (id: string) => mutate(`/api/quality/${id}/close`, id),
-    replenish: (id: string) => mutate(`/api/materials/${id}/replenish`, id),
-    inspectQuality: (id: string) => mutate(`/api/quality/${id}/inspect`, id),
-    inspectLine: (id: string) => mutate(`/api/model/${id}/inspect`, id),
-    publishRoute: (id: string) => mutate(`/api/routes/${id}/publish`, id),
-    publishKanban: (id: string) => mutate(`/api/kanban/${id}/publish`, id),
-    triggerException: () => mutate("/api/events/exception", "exception"),
-    toggleRule: (id: string) => mutate(`/api/rules/${id}/toggle`, id),
-    syncIntegration: (id: string) => mutate(`/api/integrations/${id}/sync`, id),
-    completeEquipmentCheck: (id: string) => mutate(`/api/equipment/${id}/check`, id),
-    resolveInsight: (id: string) => mutate(`/api/insights/${id}/resolve`, id),
-    advanceImplementation: (id: string) => mutate(`/api/implementation/${id}/advance`, id),
-    completeMobileTask: (id: string) => mutate(`/api/mobile/${id}/complete`, id),
-    applyTemplate: (id: string) => mutate(`/api/templates/${id}/apply`, id),
-    reset: () => mutate("/api/admin/reset", "reset"),
-    backupDatabase: () => mutate("/api/admin/database/backup", "database-backup"),
-  };
+  const activeRole = roleFocus[(snapshot.currentUser.roleKey as RoleKey) || "planner"] || roleFocus.planner;
 
   return (
-    <div className="app-shell">
-      <Sidebar activeView={activeView} onChange={setActiveView} snapshot={snapshot} />
-      <main className="app-main">
-        <Topbar
-          search={search}
-          snapshot={snapshot}
-          busyAction={busyAction}
-          activeRole={activeRole}
-          roles={roleProfiles}
-          activeUserId={activeUserId}
-          onSearch={setSearch}
-          onLogin={loginAs}
-          onLogout={logout}
-          onTriggerException={api.triggerException}
-          onReset={api.reset}
-        />
-        {error && <div className="error-banner">{error}</div>}
-        {notice && <div className="success-banner">{notice}</div>}
-        {activeView === "command" && (
-          <CommandCenter
-            metrics={metrics}
-            snapshot={snapshot}
-            onAccept={api.executeRecommendation}
-            busyAction={busyAction}
-            roleProfile={currentRole}
-            onNavigate={setActiveView}
-          />
-        )}
-        {activeView === "commercial" && (
-          <CommercialSite
-            snapshot={snapshot}
-            onCreatePlan={api.createCommercialPlan}
-            onConvert={api.convertOpportunity}
-            busyAction={busyAction}
-            onNavigate={setActiveView}
-          />
-        )}
-        {activeView === "onboarding" && (
-          <CustomerOnboarding
-            snapshot={snapshot}
-            onConvert={api.convertOpportunity}
-            onCompleteActivation={api.completeActivation}
-            onVerifyMasterData={api.verifyMasterData}
-            onNavigate={setActiveView}
-            busyAction={busyAction}
-          />
-        )}
-        {activeView === "planning" && (
-          <PlanningBoard orders={filteredOrders} recommendations={snapshot.recommendations} onAccept={api.executeRecommendation} busyAction={busyAction} />
-        )}
-        {activeView === "execution" && <Execution orders={filteredOrders} onAdvance={api.advanceOrder} busyAction={busyAction} />}
-        {activeView === "kanban" && <KanbanCenter snapshot={snapshot} onPublish={api.publishKanban} busyAction={busyAction} />}
-        {activeView === "mobile" && <MobileWorkstation tasks={snapshot.mobileTasks} onComplete={api.completeMobileTask} busyAction={busyAction} />}
-        {activeView === "quality" && <Quality issues={snapshot.qualityIssues} onClose={api.closeQuality} onInspect={api.inspectQuality} busyAction={busyAction} />}
-        {activeView === "inventory" && <Inventory materials={snapshot.materials} onReplenish={api.replenish} busyAction={busyAction} />}
-        {activeView === "mrp" && <MRP snapshot={snapshot} onReplenish={api.replenish} busyAction={busyAction} />}
-        {activeView === "procurement" && <Procurement snapshot={snapshot} onReplenish={api.replenish} busyAction={busyAction} />}
-        {activeView === "costing" && <Costing snapshot={snapshot} onSync={api.syncIntegration} busyAction={busyAction} />}
-        {activeView === "model" && <FactoryModel lines={snapshot.lines} onInspect={api.inspectLine} busyAction={busyAction} />}
-        {activeView === "routes" && <ProcessRoutes routes={snapshot.processRoutes} onPublish={api.publishRoute} busyAction={busyAction} />}
-        {activeView === "equipment" && <EquipmentResources assets={snapshot.equipmentAssets} onCheck={api.completeEquipmentCheck} busyAction={busyAction} />}
-        {activeView === "intelligence" && <DataIntelligence snapshot={snapshot} onResolve={api.resolveInsight} busyAction={busyAction} />}
-        {activeView === "agent" && <Agent snapshot={snapshot} onAccept={api.executeRecommendation} busyAction={busyAction} />}
-        {activeView === "rules" && <Rules rules={snapshot.rules} onToggle={api.toggleRule} busyAction={busyAction} />}
-        {activeView === "templates" && <IndustryTemplates templates={snapshot.industryTemplates} onApply={api.applyTemplate} busyAction={busyAction} />}
-        {activeView === "workflow" && <WorkflowEngine workflows={snapshot.workflowInstances} onAdvance={api.advanceWorkflow} busyAction={busyAction} />}
-        {activeView === "integrations" && <Integrations integrations={snapshot.integrations} onSync={api.syncIntegration} busyAction={busyAction} />}
-        {activeView === "audit" && <Audit logs={snapshot.auditLogs} />}
-        {activeView === "database" && <DatabaseManagement snapshot={snapshot} onBackup={api.backupDatabase} onReset={api.reset} busyAction={busyAction} />}
-        {activeView === "implementation" && (
-          <Implementation phases={snapshot.implementationPhases} onAdvance={api.advanceImplementation} busyAction={busyAction} />
-        )}
+    <div className="product-shell">
+      <aside className="rail">
+        <button className="brand-lockup" type="button" onClick={() => setShowSite(true)} aria-label="工脉智造原型首页">
+          <span className="brand-symbol">GM</span>
+          <span>
+            <strong>工脉智造</strong>
+            <small>制造协同原型</small>
+          </span>
+        </button>
+        <nav className="rail-nav" aria-label="产品模块">
+          {surfaces.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.key}
+                className={surface === item.key ? "active" : ""}
+                type="button"
+                onClick={() => (item.key === "home" ? setShowSite(true) : setSurface(item.key))}
+              >
+                <Icon size={18} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+        <div className="tenant-mini">
+          <Factory size={17} />
+          <strong>{snapshot.tenant.name}</strong>
+          <span>{snapshot.tenant.plants} 工厂 / {snapshot.tenant.lines} 产线 / {snapshot.tenant.users} 用户</span>
+        </div>
+      </aside>
+
+      <main className="workspace">
+        <header className="topline">
+          <div>
+            <p className="eyebrow">Cloud MES / MOM / Supply Chain / Industrial AI</p>
+            <h1>{surfaces.find((item) => item.key === surface)?.label}</h1>
+            <span>{snapshot.currentUser.name} · {activeRole.name} · {activeRole.mission}</span>
+          </div>
+          <div className="top-actions">
+            <label className="searchbox">
+              <Search size={16} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索工单、物料、客户" />
+            </label>
+            <select value={userId} onChange={(event) => login(event.target.value)} aria-label="切换角色">
+              {snapshot.users.map((user) => (
+                <option key={user.id} value={user.id}>{user.name} · {user.role}</option>
+              ))}
+            </select>
+            <button className="icon-button warn" type="button" onClick={actions.exception} disabled={busy === "exception"} title="触发现场异常">
+              <AlertTriangle size={17} />
+            </button>
+            <button className="icon-button" type="button" onClick={actions.reset} disabled={busy === "reset"} title="重置演示数据">
+              <RefreshCw size={17} />
+            </button>
+            <button className="icon-button" type="button" onClick={logout} title="退出">
+              <LogOut size={17} />
+            </button>
+          </div>
+        </header>
+
+        {notice && <div className="toast success">{notice}</div>}
+        {error && <div className="toast error">{error === "HTTP 401" ? "密码不正确，演示密码为 demo123" : error}</div>}
+
+        {surface === "home" && <Home snapshot={snapshot} actions={actions} busy={busy} onNavigate={setSurface} />}
+        {surface === "command" && <CommandCenter snapshot={snapshot} actions={actions} busy={busy} onNavigate={setSurface} />}
+        {surface === "fulfillment" && <Fulfillment snapshot={snapshot} query={query} actions={actions} busy={busy} />}
+        {surface === "shopfloor" && <Shopfloor snapshot={snapshot} actions={actions} busy={busy} />}
+        {surface === "quality" && <Quality snapshot={snapshot} actions={actions} busy={busy} />}
+        {surface === "materials" && <Materials snapshot={snapshot} actions={actions} busy={busy} />}
+        {surface === "implementation" && <Implementation snapshot={snapshot} actions={actions} busy={busy} />}
+        {surface === "platform" && <Platform snapshot={snapshot} actions={actions} busy={busy} />}
+        {surface === "admin" && <AdminCenter snapshot={snapshot} />}
       </main>
     </div>
   );
 }
 
-function Sidebar({ activeView, onChange, snapshot }: { activeView: ViewKey; onChange: (view: ViewKey) => void; snapshot: Snapshot }) {
+function MesLanding({
+  snapshot,
+  selectedUserId,
+  busy,
+  onSelectUser,
+  onLogin,
+  onEnterConsole,
+}: {
+  snapshot: Snapshot;
+  selectedUserId: string;
+  busy: string | null;
+  onSelectUser: (id: string) => void;
+  onLogin: () => void;
+  onEnterConsole: () => void;
+}) {
+  const selectedUser = snapshot.users.find((user) => user.id === selectedUserId) || snapshot.users[0];
+  const selectedFocus = roleFocus[(selectedUser.roleKey as RoleKey) || "planner"] || roleFocus.planner;
+  const activeLines = snapshot.lines.filter((line) => line.status === "运行").length;
+  const insightQueue = snapshot.intelligenceInsights.filter((item) => item.status === "待处理").slice(0, 3);
+
   return (
-    <aside className="sidebar">
-      <div className="brand-block">
-        <div className="brand-mark">Z</div>
-        <div>
-          <strong>铸云智造</strong>
-          <span>Manufacturing SaaS</span>
-        </div>
-      </div>
-      <nav className="side-nav" aria-label="SaaS 模块">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button className={activeView === item.key ? "active" : ""} key={item.key} type="button" onClick={() => onChange(item.key)}>
-              <Icon size={18} />
-              {item.label}
+    <main className="mes-site" id="top">
+      <header className="mes-nav">
+        <button className="mes-logo" type="button" aria-label="MES 官网首页">
+          <span className="brand-symbol">GM</span>
+          <strong>工脉智造</strong>
+        </button>
+        <nav aria-label="MES 专题导航">
+          {["生产管理", "质量管理", "设备管理", "物料管理", "看板管理", "产品价值"].map((item) => <a key={item} href={`#${item}`}>{item}</a>)}
+        </nav>
+        <span className="mes-phone">400-921-0816</span>
+        <button className="mes-cta" type="button" onClick={onLogin} disabled={busy !== null}>
+          免费体验
+        </button>
+      </header>
+
+      <section className="mes-hero">
+        <div className="mes-hero-copy">
+          <h1>工脉智造 - 云端 MES 制造执行系统<br />连接现场、质量与供应，实现精益交付</h1>
+          <ul className="mes-hero-points">
+            {[
+              "高效配置生产资源，减少浪费，提升工厂交付能力",
+              "实时管控生产流程，质量问题精准追溯",
+              "云端协同降低沟通成本，各个部门无缝合作",
+              "全流程电子信息化，规范保存便捷查找",
+              "生产数据智能分析，指导生产、发现问题",
+            ].map((item) => <li key={item}>{item}</li>)}
+          </ul>
+          <div className="mes-hero-actions">
+            <button className="primary-action" type="button" onClick={onLogin} disabled={busy !== null}>
+              立即建立数字化工厂 <ArrowRight size={17} />
             </button>
-          );
-        })}
-      </nav>
-      <div className="tenant-card">
-        <Factory size={18} />
-        <div>
-          <strong>{snapshot.tenant.name}</strong>
-          <span>{snapshot.tenant.plants} 工厂 · {snapshot.tenant.lines} 产线 · {snapshot.tenant.users} 用户</span>
+            <a href="#导购登录">选择员工角色进入系统</a>
+          </div>
+          <div className="mes-hero-kpis" aria-label="制造经营指标">
+            {[
+              ["准交预测", `${onTime(snapshot)}%`, "订单、产能、物料联合预测"],
+              ["缺料风险", `${lowStock(snapshot.materials)} 项`, "关联工单自动预警"],
+              ["运行产线", `${activeLines}/${snapshot.lines.length}`, "实时采集现场状态"],
+            ].map(([label, value, hint]) => (
+              <article key={label}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+                <em>{hint}</em>
+              </article>
+            ))}
+          </div>
         </div>
-      </div>
-    </aside>
+        <div className="mes-hero-aside">
+          <form className="mes-apply-card" onSubmit={(event) => { event.preventDefault(); onLogin(); }}>
+            <h2>在线注册，免费体验</h2>
+            <label><span>* 公司名称：</span><input placeholder="公司名称" defaultValue={snapshot.tenant.name} /></label>
+            <label><span>* 联系人：</span><input placeholder="联系人" defaultValue={selectedUser.name} /></label>
+            <label><span>* 手机：</span><input placeholder="手机" /></label>
+            <label><span>* 邮箱：</span><input placeholder="邮箱" defaultValue={selectedUser.email} /></label>
+            <label><span>* 所属行业：</span><select defaultValue=""><option value="" disabled>请选择行业</option><option>食品饮料</option><option>汽车零部件</option><option>装备制造</option><option>电子组装</option><option>医药化工</option></select></label>
+            <button type="submit" disabled={busy !== null}>确认提交</button>
+          </form>
+          <div className="mes-live-card" aria-label="实时工厂信号">
+            <div>
+              <span>华东一厂实时信号</span>
+              <strong>{snapshot.events[0]?.time || "刚刚"}</strong>
+            </div>
+            {snapshot.lines.slice(0, 3).map((line) => (
+              <article key={line.id}>
+                <b>{line.name}</b>
+                <span>{line.status}</span>
+                <meter min="0" max="100" value={line.oee}>{line.oee}%</meter>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <nav className="mes-anchor-bar" aria-label="专题锚点">
+        {["生产管理", "质量管理", "设备管理", "物料管理", "看板管理", "产品价值"].map((item) => <a key={item} href={`#${item}`}>{item}</a>)}
+        <button type="button" onClick={onLogin} disabled={busy !== null}>免费体验</button>
+        <a className="chat-link" href="#导购登录">客服在线 点击咨询</a>
+      </nav>
+
+      <aside className="mes-float">
+        <a href="#导购登录">联系我们</a>
+        <a href="#top">TOP</a>
+      </aside>
+
+      <section className="mes-proof-strip" aria-label="产品可信度">
+        {[
+          [`${snapshot.tenant.plants} 座工厂`, "集团多工厂租户模型"],
+          [`${snapshot.tenant.lines} 条产线`, "覆盖灌装、包装、外协装配"],
+          [`${snapshot.tenant.users} 名员工`, "按岗位授权进入工作台"],
+          [`${snapshot.integrations.length} 个接口`, "ERP、WMS、PLM 与开放 API"],
+        ].map(([value, label]) => (
+          <article key={label}>
+            <strong>{value}</strong>
+            <span>{label}</span>
+          </article>
+        ))}
+      </section>
+
+      <section className="mes-section" id="生产管理">
+        <p className="eyebrow">Manufacturing Knowledge Engine</p>
+        <h2>从工厂建模开始，贴着真实生产方式配置</h2>
+        <p className="section-lead">先把公司、工厂、车间、产线、工位、设备、BOM、工艺路线、质检点和二维码建成模型，再把不同岗位的操作权限挂到模型上。这样每一次报工、发料、质检、维修、补货都能回到同一张生产事实表。</p>
+        <div className="mes-module-cloud">
+          {mesModules.map((item, index) => (
+            <article key={item} style={{ animationDelay: `${index * 35}ms` }}>
+              <Factory size={18} />
+              <span>{item}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mes-section mes-ops-room">
+        <div className="ops-room-copy">
+          <p className="eyebrow">Operations Room</p>
+          <h2>让经营层、计划员和现场看到同一套生产事实</h2>
+          <p>专题页不只讲概念，它要让客户感到系统已经连上真实工厂：订单有交期，产线有负载，物料有风险，质量有责任人，智能建议能推送到对应岗位。</p>
+        </div>
+        <div className="ops-room-board" aria-label="实时运营驾驶舱">
+          <div className="ops-board-main">
+            {snapshot.orders.slice(0, 3).map((order) => (
+              <article key={order.id}>
+                <span>{order.customer}</span>
+                <strong>{order.id}</strong>
+                <meter min="0" max="100" value={order.progress}>{order.progress}%</meter>
+                <em>{order.line} / {order.status}</em>
+              </article>
+            ))}
+          </div>
+          <div className="ops-board-side">
+            {insightQueue.map((insight) => (
+              <article key={insight.id} className={insight.severity === "高" ? "hot" : ""}>
+                <span>{insight.domain}</span>
+                <strong>{insight.value}</strong>
+                <p>{insight.title}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mes-section mes-process-band">
+        <div className="process-copy">
+          <p className="eyebrow">How MES Works</p>
+          <h2>不是只展示看板，而是把业务动作接到生产系统</h2>
+          <p>销售订单进入系统后，计划员排程，仓库按工单发料，班组扫码报工，质检员在工序点检验，设备工程师处理停机，经营层查看准交和异常。每个动作都带着员工身份、岗位权限、业务对象和审计记录。</p>
+        </div>
+        <div className="process-grid">
+          {[
+            ["订单", `${snapshot.orders.length} 个工单`, "客户交期、优先级、产线负载"],
+            ["物料", `${lowStock(snapshot.materials)} 项风险`, "库存、安全库存、齐套、补货"],
+            ["质量", `${openQuality(snapshot.qualityIssues)} 单待闭环`, "批次、检验点、偏差、追溯"],
+            ["设备", `${snapshot.equipmentAssets.length} 台资产`, "OEE、点检、保养、停机影响"],
+          ].map(([title, value, body]) => (
+            <article key={title}>
+              <strong>{title}</strong>
+              <b>{value}</b>
+              <span>{body}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mes-section mes-data-chain">
+        <div>
+          <p className="eyebrow">Data Chain</p>
+          <h2>一条主线串起订单、现场、质量、物料和审计</h2>
+          <p className="section-lead">制造企业真正需要的是端到端的生产事实链，而不是孤立模块。每个节点都对应一个岗位动作、一个业务对象和一条可追溯记录。</p>
+        </div>
+        <div className="data-chain-track">
+          {dataChainSteps.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <article key={step.title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <Icon size={21} />
+                <strong>{step.title}</strong>
+                <p>{step.body}</p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mes-section mes-scenarios" aria-label="核心业务场景">
+        {scenarioSections.map((scenario, index) => (
+          <article
+            className={index % 2 === 1 ? "scenario-row reversed" : "scenario-row"}
+            id={scenario.id}
+            key={scenario.id}
+          >
+            <div className="scenario-copy">
+              <p className="eyebrow">{scenario.eyebrow}</p>
+              <h2>{scenario.title}</h2>
+              <p>{scenario.body}</p>
+              <div className="scenario-facts">
+                {scenario.facts.map((fact) => <span key={fact}>{fact}</span>)}
+              </div>
+            </div>
+            <figure>
+              <img src={scenario.image} alt={`${scenario.id}看板`} />
+            </figure>
+          </article>
+        ))}
+      </section>
+
+      <section className="mes-section mes-template-lab">
+        <div>
+          <p className="eyebrow">Industry Templates</p>
+          <h2>把行业 Know-how 做成可复制模板</h2>
+          <p className="section-lead">真正能商业化的 MES 不能每个客户从零项目制开发。它需要把行业字段、角色、流程、看板和质检点沉淀为模板，让首厂试点之后可以规模复制。</p>
+        </div>
+        <div className="template-grid">
+          {snapshot.industryTemplates.map((template) => (
+            <article key={template.id} className={template.status === "已启用" ? "active" : ""}>
+              <span>{template.industry}</span>
+              <h3>{template.name}</h3>
+              <p>{template.fit}</p>
+              <div>
+                {template.modules.slice(0, 4).map((item) => <b key={item}>{item}</b>)}
+              </div>
+              <em>{template.rollout}</em>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mes-section mes-dark" id="看板管理">
+        <div>
+          <p className="eyebrow">Production Dashboard</p>
+          <h2>生产数据精准传递，科学指导生产制造</h2>
+          <p className="section-lead">把车间实时状态、物料齐套、质量异常和设备负载放进同一组看板，让现场管理从追问变成看见。</p>
+        </div>
+        <div className="dashboard-showcase">
+          {dashboardShots.map((shot) => (
+            <article key={shot.title}>
+              <img src={shot.url} alt={shot.title} />
+              <strong>{shot.title}</strong>
+              <span>{shot.body}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mes-section mes-commercial">
+        <div className="commercial-copy">
+          <p className="eyebrow">Commercialization</p>
+          <h2>官网导购要能解释“怎么购买、怎么落地、怎么扩厂”</h2>
+          <p>按云端工业 SaaS 的市场认知，客户买的不是一个孤立看板，而是一套从试点到规模化复制的制造协同能力。页面需要把套餐、实施、ROI 和后台权限讲清楚。</p>
+        </div>
+        <div className="commercial-grid">
+          {snapshot.commercialPackages.map((item) => (
+            <article key={item.id} className={item.status === "主推" ? "featured" : ""}>
+              <span>{item.status}</span>
+              <h3>{item.name}</h3>
+              <p>{item.target}</p>
+              <strong>{item.priceModel}</strong>
+              <em>{item.implementation}</em>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mes-section mes-role-map">
+        <div>
+          <p className="eyebrow">Role-based Guide</p>
+          <h2>导购页把每类用户直接带到自己的工作台</h2>
+          <p className="section-lead">制造现场不是一个人用系统。角色入口越清楚，客户越容易理解购买后如何在公司内部推广：经营层看指标，计划看履约，现场做执行，IT 管配置和权限。</p>
+        </div>
+        <div className="role-map-grid">
+          {snapshot.users.map((user) => {
+            const focus = roleFocus[(user.roleKey as RoleKey) || "planner"] || roleFocus.planner;
+            const surfaceLabel = surfaces.find((item) => item.key === focus.primary)?.label || "生产系统";
+            return (
+              <article key={user.id}>
+                <div>
+                  <strong>{user.name}</strong>
+                  <span>{user.role}</span>
+                </div>
+                <p>{focus.mission}</p>
+                <footer>
+                  <b>{surfaceLabel}</b>
+                  <em>{user.permissions.length} 项权限</em>
+                </footer>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mes-section mes-admin-preview">
+        <div className="admin-preview-copy">
+          <p className="eyebrow">Admin & Permission</p>
+          <h2>注册之后必须有可信的组织、权限和接口后台</h2>
+          <p>用户在线提交只是开始。真实 MES 要能把企业租户、工厂范围、员工角色、接口状态和审计日志管起来，否则官网再漂亮也无法支撑生产系统上线。</p>
+          <button className="secondary-action" type="button" onClick={onEnterConsole}>
+            查看组织权限后台
+          </button>
+        </div>
+        <div className="admin-preview-board" aria-label="后台管理预览">
+          <article className="tenant-preview">
+            <span>{snapshot.tenant.plan}</span>
+            <strong>{snapshot.tenant.name}</strong>
+            <p>{snapshot.tenant.plants} 工厂 / {snapshot.tenant.lines} 产线 / {snapshot.tenant.users} 员工</p>
+          </article>
+          <div className="permission-preview">
+            {snapshot.users.slice(0, 4).map((user) => (
+              <article key={user.id}>
+                <span>{user.department}</span>
+                <strong>{user.name}</strong>
+                <p>{user.permissions.slice(0, 3).join(" / ")}</p>
+              </article>
+            ))}
+          </div>
+          <div className="admin-signal-grid">
+            {snapshot.integrations.slice(0, 3).map((item) => (
+              <article key={item.id}>
+                <span>{item.type}</span>
+                <strong>{item.name}</strong>
+                <em>{item.status} · {item.lastSync}</em>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mes-section mes-guide" id="导购登录">
+        <p className="eyebrow">Guided Purchase & Login</p>
+        <h2>导购页最后必须接入真实生产系统</h2>
+        <p className="section-lead">客户不是看完官网就结束，而是创建企业租户、选择岗位角色，然后进入对应权限的生产系统。下面这一步就是从官网导购切到真实业务系统的入口。</p>
+        <div className="guide-flow">
+          {guideSteps.map((step) => {
+            const Icon = step.icon;
+            return (
+              <article key={step.title}>
+                <Icon size={20} />
+                <strong>{step.title}</strong>
+                <span>{step.body}</span>
+              </article>
+            );
+          })}
+        </div>
+        <div className="role-entry">
+          <div className="role-entry-copy">
+            <h3>选择一个员工身份进入系统</h3>
+            <p>同一个公司租户下，不同员工登录后会进入不同工作台，并且只能操作自己岗位权限范围内的业务。</p>
+            <div className="selected-role-card">
+              <strong>{selectedUser.name} · {selectedUser.role}</strong>
+              <span>{selectedUser.department} / {selectedUser.plant}</span>
+              <p>{selectedFocus.mission}</p>
+            </div>
+          </div>
+          <div className="role-picker-grid">
+            {snapshot.users.map((user) => {
+              const focus = roleFocus[(user.roleKey as RoleKey) || "planner"] || roleFocus.planner;
+              return (
+                <button
+                  key={user.id}
+                  className={user.id === selectedUserId ? "selected" : ""}
+                  type="button"
+                  onClick={() => onSelectUser(user.id)}
+                >
+                  <strong>{user.name}</strong>
+                  <span>{user.role}</span>
+                  <em>{focus.primary === "admin" ? "组织权限" : surfaces.find((item) => item.key === focus.primary)?.label}</em>
+                </button>
+              );
+            })}
+          </div>
+          <button className="primary-action role-login" type="button" onClick={onLogin} disabled={busy !== null}>
+            登录并进入 {surfaces.find((item) => item.key === selectedFocus.primary)?.label || "生产系统"}
+            <ArrowRight size={17} />
+          </button>
+          {localStorage.getItem("gongmai-session") === "active" && (
+            <button className="secondary-action role-console" type="button" onClick={onEnterConsole}>
+              进入当前登录工作台
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="mes-section" id="产品价值">
+        <p className="eyebrow">Why Cloud MES</p>
+        <h2>选择云端制造协同，而不是笨重项目制软件</h2>
+        <div className="mes-value-grid">
+          {[
+            ["35%", "缩短规划和制造周期"],
+            ["65%", "加快多部门协作响应"],
+            ["80%", "简化沟通和纸张使用"],
+            ["32%", "减少在制品滞留数量"],
+            ["90%", "提升生产数据完整性"],
+            ["22%", "提高制造效率和质量"],
+          ].map(([value, label]) => (
+            <article key={label}>
+              <strong>{value}</strong>
+              <span>{label}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mes-section mes-rollout">
+        <div>
+          <p className="eyebrow">Implementation Journey</p>
+          <h2>从首厂诊断到多厂复制，每一步都有交付物</h2>
+        </div>
+        <div className="rollout-track">
+          {snapshot.implementationPhases.map((phase) => (
+            <article key={phase.id} className={phase.status === "进行中" ? "current" : phase.status === "已完成" ? "done" : ""}>
+              <span>{phase.time}</span>
+              <strong>{phase.name}</strong>
+              <em>{phase.owner}</em>
+              <p>{phase.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mes-section mes-advantage">
+        {[
+          ["四周上线", "实施与培训周期低于传统工业软件"],
+          ["按需收费", "降低一次性项目投入风险"],
+          ["灵活配置", "无需配备开发人员，敏捷完成个性化配置"],
+          ["操作简易", "支持 Web、手机和物联网设备"],
+          ["标准接口", "提供 API，支持数据导入导出和延展开发"],
+        ].map(([title, body]) => (
+          <article key={title}>
+            <CheckCircle2 size={20} />
+            <strong>{title}</strong>
+            <span>{body}</span>
+          </article>
+        ))}
+      </section>
+
+      <section className="mes-section mes-faq">
+        <p className="eyebrow">FAQ</p>
+        <h2>客户真正会问的问题，页面里就要提前回答</h2>
+        <div className="faq-grid">
+          {faqItems.map(([question, answer]) => (
+            <article key={question}>
+              <strong>{question}</strong>
+              <p>{answer}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <footer className="mes-footer">
+        <h2>立即体验制造现场数字化带来的效用与便捷</h2>
+        <button className="primary-action" type="button" onClick={onLogin} disabled={busy !== null}>进入演示工作台</button>
+        <span>客服热线：400-921-0816</span>
+      </footer>
+    </main>
   );
 }
 
-function LoginScreen({
+function Boot({ message }: { message: string }) {
+  return (
+    <main className="boot-screen">
+      <span className="brand-symbol">GM</span>
+      <strong>工脉智造制造协同原型</strong>
+      <p>{message}</p>
+    </main>
+  );
+}
+
+function Login({
   snapshot,
-  activeUserId,
-  busyAction,
+  selected,
+  busy,
   error,
+  onSelect,
   onLogin,
-  onSelectUser,
 }: {
   snapshot: Snapshot;
-  activeUserId: string;
-  busyAction: string | null;
+  selected: string;
+  busy: string | null;
   error: string | null;
-  onLogin: (userId: string, password?: string) => void;
-  onSelectUser: (userId: string) => void;
+  onSelect: (id: string) => void;
+  onLogin: (id: string, password?: string) => void;
 }) {
   const [password, setPassword] = useState("demo123");
-  const activeUser = snapshot.users.find((user) => user.id === activeUserId) || snapshot.users[0];
+  const active = snapshot.users.find((user) => user.id === selected) || snapshot.users[0];
 
   return (
-    <main className="login-shell">
-      <section className="login-brand">
-        <div className="brand-mark">Z</div>
-        <p className="eyebrow">Enterprise Manufacturing SaaS</p>
-        <h1>登录铸云智造企业租户</h1>
-        <p>
-          一家公司内的计划、车间、质量、仓储、IT 和经营层员工从这里进入同一套后端数据。
-          登录后，系统会按当前员工写入协同事件、审计日志与在线状态。
-        </p>
-        <div className="login-proof">
-          <span><ShieldCheck size={15} /> 员工身份</span>
-          <span><Database size={15} /> 租户数据隔离</span>
-          <span><FileClock size={15} /> 操作审计</span>
+    <main className="login-view">
+      <section className="login-brief">
+        <span className="brand-symbol">GM</span>
+        <p className="eyebrow">云原生制造协同平台</p>
+        <h1>从订单到交付，让工厂在线协同</h1>
+        <p>沿用云端制造协同产品的商业逻辑：官网售卖、首厂试点、车间扫码、质量追溯、供应链透明和工业 AI 建议在同一套租户数据里闭环。</p>
+        <div className="proof-strip">
+          <span><TimerReset size={15} /> 6-12 周上线</span>
+          <span><ScanLine size={15} /> 移动端优先</span>
+          <span><BrainCircuit size={15} /> 工业智能体</span>
         </div>
       </section>
-      <section className="login-card">
-        <div className="panel-title"><KeyRound size={18} /><h2>员工账号登录</h2></div>
+      <section className="login-panel">
+        <div className="section-title">
+          <KeyRound size={18} />
+          <h2>员工账号登录</h2>
+        </div>
         <label>
           <span>企业租户</span>
           <input value={`${snapshot.tenant.name} · ${snapshot.tenant.plan}`} readOnly />
         </label>
         <label>
-          <span>员工账号</span>
-          <select value={activeUserId} onChange={(event) => onSelectUser(event.target.value)}>
-            {snapshot.users.map((user) => (
-              <option value={user.id} key={user.id}>{user.name} · {user.role} · {user.email}</option>
-            ))}
+          <span>角色</span>
+          <select value={selected} onChange={(event) => onSelect(event.target.value)}>
+            {snapshot.users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}
           </select>
         </label>
         <label>
           <span>密码</span>
-          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="演示密码 demo123" />
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </label>
-        <p className="login-hint">演示环境统一密码：demo123。生产版本应替换为企业 SSO、OIDC 或钉钉/飞书/企业微信登录。</p>
-        {activeUser && (
-          <div className="login-user-preview">
-            <strong>{activeUser.name}</strong>
-            <span>{activeUser.title} · {activeUser.department} · {activeUser.plant}</span>
-          </div>
-        )}
-        {error && <div className="error-banner">{error === "HTTP 401" ? "密码不正确，演示密码为 demo123" : error}</div>}
-        <button className="button primary" type="button" onClick={() => onLogin(activeUserId, password)} disabled={busyAction === activeUserId}>
-          <KeyRound size={16} /> 登录系统
-        </button>
-        <div className="login-sso-row">
-          <button className="button secondary" type="button" disabled>企业微信 SSO</button>
-          <button className="button secondary" type="button" disabled>飞书 SSO</button>
+        <div className="identity-card">
+          <strong>{active.name}</strong>
+          <span>{active.department} · {active.plant}</span>
         </div>
+        {error && <div className="toast error">{error === "HTTP 401" ? "密码不正确，演示密码为 demo123" : error}</div>}
+        <button className="primary-action" type="button" onClick={() => onLogin(selected, password)} disabled={busy === selected}>
+          <KeyRound size={17} /> 登录工作台
+        </button>
       </section>
     </main>
   );
 }
 
-function Topbar({
+function Home({
   snapshot,
-  search,
-  busyAction,
-  activeRole,
-  roles,
-  activeUserId,
-  onSearch,
-  onLogin,
-  onLogout,
-  onTriggerException,
-  onReset,
+  actions,
+  busy,
+  onNavigate,
 }: {
   snapshot: Snapshot;
-  search: string;
-  busyAction: string | null;
-  activeRole: RoleKey;
-  roles: RoleProfile[];
-  activeUserId: string;
-  onSearch: (value: string) => void;
-  onLogin: (value: string, password?: string) => void;
-  onLogout: () => void;
-  onTriggerException: () => void;
-  onReset: () => void;
+  actions: ReturnType<typeof actionShape>;
+  busy: string | null;
+  onNavigate: (surface: Surface) => void;
 }) {
-  const activeProfile = roles.find((role) => role.key === activeRole);
   return (
-    <header className="topbar">
-      <div>
-        <p className="eyebrow">Cloud MES · APS · QMS · WMS · AI Agent</p>
-        <h1>制造协同操作系统</h1>
-        <p className="session-line">
-          {snapshot.currentUser.name} · {snapshot.currentUser.title} · {snapshot.currentUser.department} · {snapshot.tenant.plan}
-        </p>
-      </div>
-      <div className="topbar-actions">
-        <label className="role-select-field">
-          <Users size={16} />
-          <select value={activeUserId} onChange={(event) => onLogin(event.target.value)} aria-label="员工登录">
-            {snapshot.users.map((user) => <option value={user.id} key={user.id}>{user.name} · {user.role}</option>)}
-          </select>
-        </label>
-        <span className="login-scope">{activeProfile?.buyer || snapshot.currentUser.role} · {snapshot.currentUser.plant}</span>
-        <label className="search-field">
-          <Search size={16} />
-          <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="搜索工单、客户、产线" />
-        </label>
-        <button className="button secondary exception-action" type="button" onClick={onTriggerException} disabled={busyAction === "exception"}>
-          <AlertTriangle size={16} />
-          触发现场异常
-        </button>
-        <button className="button bare reset-action" type="button" onClick={onReset} disabled={busyAction === "reset"}>
-          <RefreshCw size={16} />
-          重置环境
-        </button>
-        <button className="button bare logout-action" type="button" onClick={onLogout}>
-          <LogOut size={16} />
-          退出
-        </button>
-      </div>
-    </header>
+    <div className="screen-stack">
+      <section className="hero-grid">
+        <div className="hero-copy">
+          <p className="eyebrow">工脉智造 / 云端制造协同</p>
+          <h2>云端协同，数据驱动的制造运营平台</h2>
+          <p>
+            以订单履约为主线，连接计划、物料、生产、质检、设备、供应链和工业智能体。
+            售卖从首厂试点开始，沉淀行业模板，再复制到多工厂和上下游供应网络。
+          </p>
+          <div className="hero-actions">
+            <button className="primary-action" type="button" onClick={() => onNavigate("command")}>
+              进入经营总览 <ArrowRight size={17} />
+            </button>
+            <button className="secondary-action" type="button" onClick={() => onNavigate("implementation")}>
+              查看上线路径
+            </button>
+          </div>
+        </div>
+        <div className="hero-ops" aria-label="制造运营信号">
+          <Metric label="准交预测" value={`${onTime(snapshot)}%`} tone="good" />
+          <Metric label="缺料风险" value={`${lowStock(snapshot.materials)} 项`} tone="warn" />
+          <Metric label="质量待闭环" value={`${openQuality(snapshot.qualityIssues)} 单`} tone="risk" />
+          <div className="line-map">
+            {snapshot.lines.map((line) => (
+              <span key={line.id} className={`line-node ${line.status === "运行" ? "run" : "hold"}`}>
+                {line.name}<b>{line.oee}%</b>
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="product-matrix">
+        {[
+          ["工脉 MES", "中大型工厂与集团多厂", "MES/MOM、计划、质量、设备、低代码、AI"],
+          ["工脉轻工单", "中小工厂快速数字化", "工单、报工、物料、质检、计件工资、消息提醒"],
+          ["工脉供应链", "链主企业与品牌方", "供应商、订单同步、来料进度、库存透明、风险预警"],
+          ["工业智能体", "数据成熟客户", "AI 排程、ChatBI、异常归因、质量预测、自动决策"],
+        ].map(([name, target, scope]) => (
+          <article className="matrix-card" key={name}>
+            <Sparkles size={18} />
+            <h3>{name}</h3>
+            <p>{target}</p>
+            <span>{scope}</span>
+          </article>
+        ))}
+      </section>
+
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={LineChart} title="商业化套餐" />
+          <div className="package-grid">
+            {snapshot.commercialPackages.map((item) => (
+              <PackageCard key={item.id} item={item} busy={busy} onPlan={actions.planPackage} />
+            ))}
+          </div>
+        </div>
+        <EventPanel events={snapshot.events} />
+      </section>
+    </div>
   );
 }
 
 function CommandCenter({
-  metrics,
   snapshot,
-  onAccept,
-  busyAction,
-  roleProfile,
+  actions,
+  busy,
   onNavigate,
 }: {
-  metrics: { label: string; value: string; tone: string }[];
   snapshot: Snapshot;
-  onAccept: (id: string) => void;
-  busyAction: string | null;
-  roleProfile: RoleProfile;
-  onNavigate: (view: ViewKey) => void;
+  actions: ReturnType<typeof actionShape>;
+  busy: string | null;
+  onNavigate: (surface: Surface) => void;
 }) {
-  const riskOrders = snapshot.orders.filter((order) => order.status === "风险" || order.status === "阻塞");
-  const lowStock = snapshot.materials.filter((item) => item.stock < item.safeStock);
-  const activeAgent = snapshot.recommendations.find((item) => !item.accepted) || snapshot.recommendations[0];
-
   return (
-    <section className="view-stack">
-      <RoleLaunchpad profile={roleProfile} onNavigate={onNavigate} />
-      <div className="ai-hero">
-        <div className="ai-hero-copy">
-          <span className="ai-state"><RadioTower size={15} /> AI Manufacturing Copilot Online</span>
-          <h2>工厂智能体正在重排今日生产态势</h2>
-          <p>
-            汇聚订单、产线、库存、质量与规则引擎，持续把现场噪声压缩成可执行动作。
-            当前最高优先级建议：{activeAgent?.title}
-          </p>
-          <div className="ai-hero-actions">
-            {activeAgent && (
-              <button className="button primary" type="button" onClick={() => onAccept(activeAgent.id)} disabled={busyAction === activeAgent.id}>
-                <Sparkles size={16} /> 执行首要建议
+    <div className="screen-stack">
+      <section className="metric-row">
+        <Metric label="准交预测" value={`${onTime(snapshot)}%`} tone="good" />
+        <Metric label="平均工单进度" value={`${avg(snapshot.orders.map((order) => order.progress))}%`} tone="info" />
+        <Metric label="缺料风险" value={`${lowStock(snapshot.materials)} 项`} tone="warn" />
+        <Metric label="质量待闭环" value={`${openQuality(snapshot.qualityIssues)} 单`} tone="risk" />
+        <Metric label="接口健康" value={`${snapshot.integrations.filter((item) => item.status === "已连接").length}/${snapshot.integrations.length}`} tone="info" />
+      </section>
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={BrainCircuit} title="AI 运营建议" />
+          <div className="recommendation-list">
+            {snapshot.recommendations.map((item) => (
+              <RecommendationCard key={item.id} item={item} busy={busy} onAccept={actions.executeRecommendation} />
+            ))}
+          </div>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={Factory} title="角色下一步" />
+          <div className="journey-list">
+            {[
+              ["经营层", "看准交、库存、质量与产能红线", "command"],
+              ["计划员", "处理阻塞工单并冻结今日计划", "fulfillment"],
+              ["现场", "扫码报工并回写异常", "shopfloor"],
+              ["质量", "关闭偏差并归档追溯链", "quality"],
+              ["IT/实施", "校验主数据和接口健康", "implementation"],
+            ].map(([role, task, target]) => (
+              <button key={role} className="journey-item" type="button" onClick={() => onNavigate(target as Surface)}>
+                <strong>{role}</strong>
+                <span>{task}</span>
+                <ArrowRight size={16} />
               </button>
-            )}
-            <span>{snapshot.events.length} 条实时事件 · {snapshot.auditLogs.length} 条审计轨迹</span>
+            ))}
           </div>
         </div>
-        <div className="neural-orbit" aria-hidden="true">
-          <span className="orbit-core">AI</span>
-          <i className="orbit orbit-a"></i>
-          <i className="orbit orbit-b"></i>
-          <b className="pulse p1"></b>
-          <b className="pulse p2"></b>
-          <b className="pulse p3"></b>
-        </div>
-      </div>
-      <div className="metric-grid">
-        {metrics.map((metric) => (
-          <article className={`metric-card ${metric.tone}`} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.label === "准交预测" ? "AI forecast" : metric.label === "工单平均进度" ? "Live MES" : metric.label === "缺料风险" ? "WMS signal" : "QMS loop"}</small>
-          </article>
-        ))}
-      </div>
-      <div className="dashboard-grid">
-        <Panel title="今日风险队列" icon={AlertTriangle}>
-          <div className="dense-list">
-            {riskOrders.map((order) => (
-              <div className="risk-row" key={order.id}>
-                <StatusPill status={order.status} />
+      </section>
+      <EventPanel events={snapshot.events} />
+    </div>
+  );
+}
+
+function Fulfillment({ snapshot, query, actions, busy }: { snapshot: Snapshot; query: string; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+  const orders = filterOrders(snapshot.orders, query);
+  return (
+    <div className="screen-stack">
+      <section className="split wide-left">
+        <div className="panel">
+          <SectionTitle icon={Route} title="订单履约池" />
+          <div className="table-list">
+            {orders.map((order) => (
+              <article className="work-card" key={order.id}>
                 <div>
-                  <strong>{order.id}</strong>
-                  <span>{order.customer} · {order.sku}</span>
+                  <strong>{order.id} · {order.sku}</strong>
+                  <span>{order.customer} / {order.line} / 交期 {order.due}</span>
                 </div>
-                <em>{order.due}</em>
-              </div>
-            ))}
-          </div>
-        </Panel>
-        <Panel title="产线负载" icon={Activity}>
-          <LineLoad lines={snapshot.lines} />
-        </Panel>
-        <Panel title="缺料预警" icon={PackageCheck}>
-          <div className="dense-list">
-            {lowStock.map((item) => (
-              <div className="stock-row" key={item.id}>
-                <strong>{item.id}</strong>
-                <span>{item.name}</span>
-                <Progress value={Math.round((item.stock / item.safeStock) * 100)} tone="amber" />
-              </div>
-            ))}
-          </div>
-        </Panel>
-        <Panel title="企业级运行态" icon={Database}>
-          <SystemReadiness snapshot={snapshot} />
-        </Panel>
-        <Panel title="在线协同" icon={Users}>
-          <EmployeePresence users={snapshot.users} currentUser={snapshot.currentUser} />
-        </Panel>
-        <Panel title="AI 建议" icon={Sparkles} wide>
-          <RecommendationList recommendations={snapshot.recommendations.slice(0, 2)} onAccept={onAccept} busyAction={busyAction} />
-        </Panel>
-        <Panel title="协同事件流" icon={LineChart} wide>
-          <EventFeed events={snapshot.events} />
-        </Panel>
-      </div>
-    </section>
-  );
-}
-
-function RoleLaunchpad({ profile, onNavigate }: { profile: RoleProfile; onNavigate: (view: ViewKey) => void }) {
-  return (
-    <section className="role-launchpad">
-      <div className="role-summary">
-        <span className="ai-state"><Users size={15} /> {profile.buyer}</span>
-        <h2>{profile.label} 今天如何使用铸云智造</h2>
-        <p>{profile.mission}</p>
-        <small>衡量指标：{profile.success}</small>
-      </div>
-      <div className="role-task-grid">
-        {profile.firstActions.map((action, index) => (
-          <button className="role-task" type="button" key={action.label} onClick={() => onNavigate(action.view)}>
-            <span>0{index + 1}</span>
-            <strong>{action.label}</strong>
-            <small>{action.detail}</small>
-            <em>进入模块 <ChevronRight size={14} /></em>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function CommercialSite({
-  snapshot,
-  onCreatePlan,
-  onConvert,
-  busyAction,
-  onNavigate,
-}: {
-  snapshot: Snapshot;
-  onCreatePlan: (id: string) => void;
-  onConvert: (id: string) => void;
-  busyAction: string | null;
-  onNavigate: (view: ViewKey) => void;
-}) {
-  const heroMetrics = [
-    { label: "首厂上线", value: "4-8 周" },
-    { label: "按需付费", value: "模块化" },
-    { label: "对接系统", value: `${snapshot.integrations.length}+` },
-  ];
-  const salesMotion = [
-    ["价值诊断", "导入订单、库存、质量和产线样本，测算 ROI。"],
-    ["样板产线", "用 Starter 或 Professional 跑通真实工单闭环。"],
-    ["首厂上线", "完成 ERP/PLM/WMS 接口、培训、验收和审计。"],
-    ["扩厂复制", "复用行业模板、工艺路线、看板和实施蓝图。"],
-  ];
-
-  return (
-    <section className="view-stack">
-      <div className="commercial-hero">
-        <div>
-          <span className="ai-state"><Rocket size={15} /> Go-to-market page</span>
-          <h2>云端制造协同 SaaS，从样板产线卖到集团运营</h2>
-          <p>对外讲清楚“为什么买、怎么买、多久上线、怎么证明 ROI”。页面里的套餐、行业包、实施路径和售前方案都连接到当前产品模块与审计。</p>
-          <div className="commercial-actions">
-            <button className="button primary" type="button" onClick={() => onCreatePlan("PKG-PRO")} disabled={busyAction === "PKG-PRO"}>
-              <Rocket size={16} /> 生成主推售前方案
-            </button>
-            <button className="button secondary" type="button" onClick={() => onNavigate("implementation")}>
-              <ClipboardList size={16} /> 查看实施蓝图
-            </button>
-            <button className="button ghost" type="button" onClick={() => onNavigate("onboarding")}>
-              <BadgeCheck size={16} /> 进入客户启动
-            </button>
-          </div>
-        </div>
-        <div className="commercial-hero-metrics">
-          {heroMetrics.map((item) => (
-            <article key={item.label}><span>{item.label}</span><strong>{item.value}</strong></article>
-          ))}
-        </div>
-      </div>
-      <div className="commercial-proof">
-        {["小投入、大回报", "四周起快速实施", "按需配置付费", "开放 API 集成", "专业实施陪跑"].map((item) => (
-          <span key={item}><CheckCircle2 size={15} /> {item}</span>
-        ))}
-      </div>
-      <div className="commercial-grid">
-        {snapshot.commercialPackages.map((item) => (
-          <CommercialPackageCard item={item} onCreatePlan={onCreatePlan} busyAction={busyAction} key={item.id} />
-        ))}
-      </div>
-      <div className="commercial-layout">
-        <Panel title="销售路径" icon={Route}>
-          <div className="sales-motion">
-            {salesMotion.map(([title, body], index) => (
-              <article key={title}>
-                <span>{index + 1}</span>
-                <div><strong>{title}</strong><p>{body}</p></div>
+                <Progress value={order.progress} />
+                <StatusPill value={order.status} />
+                <button className="small-action" type="button" onClick={() => actions.advanceOrder(order.id)} disabled={busy === order.id}>
+                  <Play size={15} /> 报工推进
+                </button>
               </article>
             ))}
           </div>
-        </Panel>
-        <Panel title="已打通商机" icon={Database}>
-          <OpportunityList opportunities={snapshot.salesOpportunities} packages={snapshot.commercialPackages} onConvert={onConvert} busyAction={busyAction} />
-        </Panel>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={BarChart3} title="产线负载" />
+          <div className="line-stack">
+            {snapshot.lines.map((line) => (
+              <div className="line-row" key={line.id}>
+                <span>{line.name}</span>
+                <Progress value={line.load} />
+                <b>{line.status}</b>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="panel">
+        <SectionTitle icon={Layers3} title="工艺路线与质检点" />
+        <div className="route-grid">
+          {snapshot.processRoutes.map((route) => (
+            <article className="route-card" key={route.id}>
+              <strong>{route.product} · {route.version}</strong>
+              <span>{route.line} / {route.cycleTime} / {route.status}</span>
+              <div>{route.steps.map((step) => <em key={step.sequence}>{step.name}</em>)}</div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Shopfloor({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+  return (
+    <section className="split">
+      <div className="panel phone-panel">
+        <SectionTitle icon={Smartphone} title="移动扫码任务" />
+        {snapshot.mobileTasks.map((task) => (
+          <article className="mobile-task" key={task.id}>
+            <ScanLine size={22} />
+            <div>
+              <strong>{task.title}</strong>
+              <span>{task.target} / {task.scanCode}</span>
+              <p>{task.instruction}</p>
+            </div>
+            <button className="small-action" type="button" onClick={() => actions.completeMobile(task.id)} disabled={busy === task.id || task.status === "已完成"}>
+              <CheckCircle2 size={15} /> {task.status}
+            </button>
+          </article>
+        ))}
+      </div>
+      <div className="panel">
+        <SectionTitle icon={Gauge} title="现场大屏" />
+        <div className="kanban-grid">
+          {snapshot.kanbanBoards.map((board) => (
+            <article key={board.id}>
+              <strong>{board.name}</strong>
+              <span>{board.audience} / {board.scope}</span>
+              <p>{board.widgets.join(" · ")}</p>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-function CommercialPackageCard({
-  item,
-  onCreatePlan,
-  busyAction,
-}: {
-  item: CommercialPackage;
-  onCreatePlan: (id: string) => void;
-  busyAction: string | null;
-}) {
+function Quality({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
   return (
-    <article className={`commercial-card ${item.status === "主推" ? "featured" : ""}`}>
-      <div className="card-head">
-        <div><strong>{item.name}</strong><span>{item.id} · {item.target}</span></div>
-        <span className={item.status === "主推" ? "stock-badge" : "stock-badge muted-badge"}>{item.status}</span>
+    <section className="split">
+      <div className="panel">
+        <SectionTitle icon={ClipboardCheck} title="质量偏差闭环" />
+        <div className="table-list">
+          {snapshot.qualityIssues.map((issue) => (
+            <IssueCard key={issue.id} item={issue} busy={busy} onClose={actions.closeQuality} />
+          ))}
+        </div>
       </div>
-      <p>{item.scope}</p>
-      <div className="commercial-meta">
-        <div><span>收费口径</span><strong>{item.priceModel}</strong></div>
-        <div><span>上线承诺</span><strong>{item.implementation}</strong></div>
-        <div><span>ROI 话术</span><strong>{item.roi}</strong></div>
+      <div className="panel">
+        <SectionTitle icon={ShieldCheck} title="追溯链" />
+        <div className="trace-chain">
+          {["来料批次", "工序扫码", "首件确认", "巡检记录", "成品放行", "客户追溯"].map((step, index) => (
+            <span key={step}><b>{index + 1}</b>{step}</span>
+          ))}
+        </div>
       </div>
-      <div className="kanban-widgets">
-        <strong>绑定模块</strong>
-        <div>{item.modules.map((module) => <span key={module}>{module}</span>)}</div>
+    </section>
+  );
+}
+
+function Materials({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+  return (
+    <section className="split">
+      <div className="panel">
+        <SectionTitle icon={Boxes} title="物料与齐套" />
+        <div className="table-list">
+          {snapshot.materials.map((item) => (
+            <MaterialCard key={item.id} item={item} busy={busy} onReplenish={actions.replenish} />
+          ))}
+        </div>
       </div>
-      <button className="button secondary" type="button" onClick={() => onCreatePlan(item.id)} disabled={busyAction === item.id}>
-        <Rocket size={16} /> 生成售前方案
+      <div className="panel">
+        <SectionTitle icon={Truck} title="供应协同" />
+        <div className="supply-cards">
+          {snapshot.salesOpportunities.map((item) => (
+            <article key={item.id}>
+              <strong>{item.customer}</strong>
+              <span>{item.stage}</span>
+              <p>{item.nextStep}</p>
+              <button className="small-action" type="button" onClick={() => actions.convert(item.id)} disabled={busy === item.id || item.status === "已转实施"}>
+                转入实施
+              </button>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Implementation({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+  return (
+    <div className="screen-stack">
+      <section className="panel">
+        <SectionTitle icon={BadgeCheck} title="7 步上线路径" />
+        <div className="phase-track">
+          {snapshot.implementationPhases.map((phase) => (
+            <article key={phase.id} className={phase.status === "进行中" ? "current" : ""}>
+              <strong>{phase.name}</strong>
+              <span>{phase.owner} / {phase.time}</span>
+              <p>{phase.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={Database} title="主数据准备度" />
+          <div className="table-list">
+            {snapshot.masterDataChecks.map((item) => (
+              <article className="data-check" key={item.id}>
+                <div>
+                  <strong>{item.domain}</strong>
+                  <span>{item.source} / {item.owner} / {item.issues} 个问题</span>
+                </div>
+                <Progress value={item.readiness} />
+                <button className="small-action" type="button" onClick={() => actions.verifyMasterData(item.id)} disabled={busy === item.id || item.status === "已校验"}>
+                  校验
+                </button>
+              </article>
+            ))}
+          </div>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={Users} title="角色启用" />
+          <div className="activation-list">
+            {snapshot.activationTasks.map((task) => (
+              <article key={task.id}>
+                <strong>{task.role}</strong>
+                <span>{task.workspace}</span>
+                <p>{task.firstAction}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Platform({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+  return (
+    <div className="screen-stack">
+      <section className="platform-grid">
+        {[
+          ["云原生架构", "容器化、弹性扩容、持续迭代", Database],
+          ["低代码配置", "字段、流程、报表、权限和行业模板", Settings2],
+          ["开放接口", "ERP、PLM、WMS、IoT 和身份系统", PlugZap],
+          ["工业智能体", "排程、ChatBI、异常归因和质量预测", BrainCircuit],
+        ].map(([title, body, Icon]) => (
+          <article className="capability-card" key={title as string}>
+            <Icon size={22} />
+            <strong>{title}</strong>
+            <span>{body}</span>
+          </article>
+        ))}
+      </section>
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={PlugZap} title="集成健康" />
+          <div className="table-list">
+            {snapshot.integrations.map((item) => <IntegrationCard key={item.id} item={item} busy={busy} onSync={actions.syncIntegration} />)}
+          </div>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={FileClock} title="审计与数据库" />
+          <div className="db-grid">
+            <Metric label="数据库" value={snapshot.databaseAdmin.status} tone="good" />
+            <Metric label="表数量" value={`${snapshot.databaseAdmin.tableCount}`} tone="info" />
+            <Metric label="记录数" value={`${snapshot.databaseAdmin.totalRows}`} tone="info" />
+            <Metric label="备份数" value={`${snapshot.databaseAdmin.backups.length}`} tone="info" />
+          </div>
+          <div className="audit-list">
+            {snapshot.auditLogs.slice(0, 6).map((log) => (
+              <span key={log.id}>{log.actor} / {log.action} / {log.entity}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AdminCenter({ snapshot }: { snapshot: Snapshot }) {
+  const permissionLabels: Record<string, string> = {
+    "orders:write": "工单推进",
+    "schedule:write": "排程调整",
+    "quality:write": "质量处理",
+    "inventory:write": "库存操作",
+    "config:read": "配置查看",
+    "config:write": "配置维护",
+    "dashboard:read": "经营看板",
+    "approval:write": "审批放行",
+    "audit:read": "审计查看",
+    "execution:write": "现场报工",
+    "mobile:write": "移动任务",
+    "routes:read": "工艺查看",
+    "workflow:write": "流程处理",
+    "integrations:read": "接口查看",
+    "integrations:write": "接口维护",
+    "users:read": "员工查看",
+  };
+  const permissionKeys = Array.from(new Set(snapshot.users.flatMap((user) => user.permissions)));
+
+  return (
+    <div className="screen-stack">
+      <section className="admin-hero panel">
+        <div>
+          <p className="eyebrow">Tenant Admin Console</p>
+          <h2>企业租户、员工、角色与操作权限</h2>
+          <p>一家制造企业上线 MES 后，后台不是摆设。IT/实施负责人需要管理公司组织、工厂范围、岗位角色、可操作模块、接口权限和审计追踪，保证每个员工只看到、只操作自己该负责的生产对象。</p>
+        </div>
+        <div className="admin-tenant-card">
+          <Factory size={22} />
+          <strong>{snapshot.tenant.name}</strong>
+          <span>{snapshot.tenant.plan} / {snapshot.tenant.plants} 工厂 / {snapshot.tenant.users} 员工</span>
+        </div>
+      </section>
+
+      <section className="split wide-left">
+        <div className="panel">
+          <SectionTitle icon={Users} title="员工与数据范围" />
+          <div className="employee-grid">
+            {snapshot.users.map((user) => <EmployeeCard key={user.id} user={user} />)}
+          </div>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={ShieldCheck} title="权限设计原则" />
+          <div className="policy-list">
+            {[
+              ["最小权限", "生产员工只能报工和执行移动任务，不能改排程或接口。"],
+              ["按工厂隔离", "员工默认只进入所在工厂、车间、产线的数据范围。"],
+              ["关键动作审计", "补货、关闭偏差、同步接口、重置数据都进入审计日志。"],
+              ["岗位工作台", "登录后按照角色进入经营、计划、现场、质量、仓储或后台。"],
+            ].map(([title, body]) => (
+              <article key={title}>
+                <strong>{title}</strong>
+                <span>{body}</span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <SectionTitle icon={UserCog} title="角色权限矩阵" />
+        <div className="permission-table">
+          <div className="permission-row head">
+            <span>员工</span>
+            {permissionKeys.map((key) => <span key={key}>{permissionLabels[key] || key}</span>)}
+          </div>
+          {snapshot.users.map((user) => (
+            <div className="permission-row" key={user.id}>
+              <strong>{user.name}<small>{user.role}</small></strong>
+              {permissionKeys.map((key) => (
+                <span key={key} className={user.permissions.includes(key) ? "granted" : ""}>
+                  {user.permissions.includes(key) ? "允许" : "拒绝"}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={FileClock} title="最近审计" />
+          <div className="audit-list">
+            {snapshot.auditLogs.slice(0, 8).map((log) => (
+              <span key={log.id}>{log.createdAt} / {log.actor} / {log.action} / {log.entity}</span>
+            ))}
+          </div>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={Database} title="后台数据对象" />
+          <div className="db-grid">
+            <Metric label="员工" value={`${snapshot.users.length}`} tone="info" />
+            <Metric label="权限项" value={`${permissionKeys.length}`} tone="info" />
+            <Metric label="接口" value={`${snapshot.integrations.length}`} tone="info" />
+            <Metric label="审计" value={`${snapshot.auditLogs.length}`} tone="good" />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function EmployeeCard({ user }: { user: Employee }) {
+  return (
+    <article className="employee-card">
+      <div>
+        <strong>{user.name}</strong>
+        <span>{user.role}</span>
+      </div>
+      <p>{user.department} / {user.plant}</p>
+      <em>{user.status} / {user.lastActive}</em>
+      <div>
+        {user.permissions.slice(0, 4).map((permission) => <b key={permission}>{permission}</b>)}
+      </div>
+    </article>
+  );
+}
+
+function PackageCard({ item, busy, onPlan }: { item: CommercialPackage; busy: string | null; onPlan: (id: string) => void }) {
+  return (
+    <article className="package-card">
+      <span className="badge">{item.status}</span>
+      <h3>{item.name}</h3>
+      <p>{item.target}</p>
+      <strong>{item.priceModel}</strong>
+      <span>{item.scope}</span>
+      <em>{item.roi}</em>
+      <button className="small-action" type="button" onClick={() => onPlan(item.id)} disabled={busy === item.id}>
+        生成方案
       </button>
     </article>
   );
 }
 
-function OpportunityList({
-  opportunities,
-  packages,
-  onConvert,
-  busyAction,
-}: {
-  opportunities: SalesOpportunity[];
-  packages: CommercialPackage[];
-  onConvert?: (id: string) => void;
-  busyAction?: string | null;
-}) {
+function RecommendationCard({ item, busy, onAccept }: { item: Recommendation; busy: string | null; onAccept: (id: string) => void }) {
   return (
-    <div className="opportunity-list">
-      {opportunities.map((item) => {
-        const selectedPackage = packages.find((pkg) => pkg.id === item.packageId);
-        return (
-          <article key={item.id}>
-            <div><strong>{item.customer}</strong><span>{selectedPackage?.name || item.packageId}</span></div>
-            <em>{item.stage}</em>
-            <p>{item.nextStep}</p>
-            <small>{item.owner} · {item.status}</small>
-            {onConvert && (
-              <button className="button secondary compact-button" type="button" onClick={() => onConvert(item.id)} disabled={busyAction === item.id || item.status === "已转实施"}>
-                <BadgeCheck size={15} /> {item.status === "已转实施" ? "已进入实施" : "转入客户启动"}
-              </button>
-            )}
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function CustomerOnboarding({
-  snapshot,
-  onConvert,
-  onCompleteActivation,
-  onVerifyMasterData,
-  onNavigate,
-  busyAction,
-}: {
-  snapshot: Snapshot;
-  onConvert: (id: string) => void;
-  onCompleteActivation: (id: string) => void;
-  onVerifyMasterData: (id: string) => void;
-  onNavigate: (view: ViewKey) => void;
-  busyAction: string | null;
-}) {
-  const activeOpportunity = snapshot.salesOpportunities.find((item) => item.status !== "已转实施") || snapshot.salesOpportunities[0];
-  const convertedCount = snapshot.salesOpportunities.filter((item) => item.status === "已转实施").length;
-  const activationDone = snapshot.activationTasks.filter((item) => item.status === "已完成").length;
-  const dataScore = snapshot.masterDataChecks.length
-    ? Math.round(snapshot.masterDataChecks.reduce((sum, item) => sum + item.readiness, 0) / snapshot.masterDataChecks.length)
-    : 0;
-  const activePhase = snapshot.implementationPhases.find((phase) => phase.status === "进行中");
-  const nextDataCheck = snapshot.masterDataChecks.find((item) => item.status !== "已校验");
-
-  return (
-    <section className="view-stack">
-      <div className="activation-hero">
-        <div>
-          <span className="ai-state"><BadgeCheck size={15} /> Customer activation workspace</span>
-          <h2>把商机变成客户公司真正会用的上线路径</h2>
-          <p>
-            这里承接商业化官网生成的售前方案，把客户内部角色、主数据、接口、实施阶段和首个业务动作编排成可推进、可审计的启动工作台。
-          </p>
-          <div className="commercial-actions">
-            {activeOpportunity && (
-              <button className="button primary" type="button" onClick={() => onConvert(activeOpportunity.id)} disabled={busyAction === activeOpportunity.id || activeOpportunity.status === "已转实施"}>
-                <Rocket size={16} /> {activeOpportunity.status === "已转实施" ? "已转实施" : "转入实施蓝图"}
-              </button>
-            )}
-            {nextDataCheck && (
-              <button className="button secondary" type="button" onClick={() => onVerifyMasterData(nextDataCheck.id)} disabled={busyAction === nextDataCheck.id}>
-                <Database size={16} /> 校验下一组主数据
-              </button>
-            )}
-            <button className="button ghost" type="button" onClick={() => onNavigate("implementation")}>
-              <ClipboardList size={16} /> 查看蓝图阶段
-            </button>
-          </div>
-        </div>
-        <div className="activation-scorecard">
-          <article><span>已转实施商机</span><strong>{convertedCount}/{snapshot.salesOpportunities.length}</strong></article>
-          <article><span>角色启用完成</span><strong>{activationDone}/{snapshot.activationTasks.length}</strong></article>
-          <article><span>主数据准备度</span><strong>{dataScore}%</strong></article>
-          <article><span>当前蓝图阶段</span><strong>{activePhase?.name || "扩厂复制"}</strong></article>
-        </div>
+    <article className="recommendation-card">
+      <span className={`severity ${item.severity}`}>{item.severity}</span>
+      <div>
+        <strong>{item.title}</strong>
+        <p>{item.body}</p>
+        <em>{item.impact}</em>
       </div>
-
-      <div className="activation-layout">
-        <Panel title="商机到实施" icon={Rocket}>
-          <OpportunityList opportunities={snapshot.salesOpportunities} packages={snapshot.commercialPackages} onConvert={onConvert} busyAction={busyAction} />
-        </Panel>
-        <Panel title="上线入口顺序" icon={Route}>
-          <div className="activation-path">
-            {[
-              ["售前方案", "确认套餐、ROI、试点线与报价口径"],
-              ["客户启动", "把角色、主数据和系统边界拆成任务"],
-              ["实施蓝图", "按阶段推进诊断、建模、集成和试点"],
-              ["首厂验收", "用真实订单证明生产、质量、库存闭环"],
-            ].map(([title, body], index) => (
-              <article key={title}>
-                <span>{index + 1}</span>
-                <div><strong>{title}</strong><p>{body}</p></div>
-              </article>
-            ))}
-          </div>
-        </Panel>
-      </div>
-
-      <div className="activation-layout main">
-        <Panel title="角色启用任务" icon={Users} wide>
-          <ActivationTaskList tasks={snapshot.activationTasks} onComplete={onCompleteActivation} busyAction={busyAction} />
-        </Panel>
-        <Panel title="主数据准备度" icon={Database} wide>
-          <MasterDataReadiness checks={snapshot.masterDataChecks} onVerify={onVerifyMasterData} busyAction={busyAction} />
-        </Panel>
-      </div>
-    </section>
-  );
-}
-
-function ActivationTaskList({
-  tasks,
-  onComplete,
-  busyAction,
-}: {
-  tasks: ActivationTask[];
-  onComplete: (id: string) => void;
-  busyAction: string | null;
-}) {
-  return (
-    <div className="activation-task-list">
-      {tasks.map((task) => (
-        <article className="activation-task" key={task.id}>
-          <div className="card-head">
-            <div><strong>{task.role}</strong><span>{task.workspace} · {task.owner}</span></div>
-            <span className={task.status === "已完成" ? "stock-badge" : task.status === "进行中" ? "stock-badge warning" : "stock-badge muted-badge"}>{task.status}</span>
-          </div>
-          <p>{task.firstAction}</p>
-          <small>{task.successMetric}</small>
-          <button className="button secondary compact-button" type="button" onClick={() => onComplete(task.id)} disabled={busyAction === task.id || task.status === "已完成"}>
-            <CheckCircle2 size={15} /> {task.status === "已完成" ? "已完成" : "完成启用"}
-          </button>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function MasterDataReadiness({
-  checks,
-  onVerify,
-  busyAction,
-}: {
-  checks: MasterDataCheck[];
-  onVerify: (id: string) => void;
-  busyAction: string | null;
-}) {
-  return (
-    <div className="master-data-list">
-      {checks.map((check) => {
-        const tone = check.readiness >= 90 ? "green" : check.readiness >= 75 ? "amber" : "red";
-        return (
-          <article className="master-data-row" key={check.id}>
-            <div>
-              <strong>{check.domain}</strong>
-              <span>{check.source} · {check.owner}</span>
-            </div>
-            <div className="readiness-meter">
-              <Progress value={check.readiness} tone={tone} />
-              <small>{check.readiness}% · {check.issues} 个异常</small>
-            </div>
-            <span className={check.status === "已校验" ? "stock-badge" : check.status === "待校验" ? "stock-badge warning" : "stock-badge danger"}>{check.status}</span>
-            <button className="icon-action" type="button" onClick={() => onVerify(check.id)} disabled={busyAction === check.id || check.status === "已校验"}>
-              <ShieldCheck size={15} />
-              校验
-            </button>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function PlanningBoard({
-  orders,
-  recommendations,
-  onAccept,
-  busyAction,
-}: {
-  orders: WorkOrder[];
-  recommendations: Recommendation[];
-  onAccept: (id: string) => void;
-  busyAction: string | null;
-}) {
-  return (
-    <section className="view-stack">
-      <ViewHeader title="订单与动态排程" subtitle="按交期、产能、物料、质量约束计算风险，并通过 AI 重排形成可解释方案。" icon={Route} />
-      <div className="planning-layout">
-        <div className="order-board">
-          {orders.map((order) => (
-            <article className="order-card" key={order.id}>
-              <div className="card-head">
-                <div>
-                  <strong>{order.id}</strong>
-                  <span>{order.customer}</span>
-                </div>
-                <StatusPill status={order.status} />
-              </div>
-              <h3>{order.sku}</h3>
-              <div className="order-meta">
-                <span>{order.line}</span>
-                <span>{order.due}</span>
-                <span>{order.priority}</span>
-              </div>
-              <Progress value={order.progress} tone={order.status === "阻塞" ? "red" : "green"} />
-              <div className="blockers">
-                {order.blockers.length ? order.blockers.map((blocker) => <span key={blocker}>{blocker}</span>) : <span>无阻塞</span>}
-              </div>
-            </article>
-          ))}
-        </div>
-        <Panel title="AI 排程建议" icon={BrainCircuit}>
-          <RecommendationList recommendations={recommendations} onAccept={onAccept} busyAction={busyAction} />
-        </Panel>
-      </div>
-    </section>
-  );
-}
-
-function Execution({ orders, onAdvance, busyAction }: { orders: WorkOrder[]; onAdvance: (id: string) => void; busyAction: string | null }) {
-  return (
-    <section className="view-stack">
-      <ViewHeader title="生产执行" subtitle="班组长视角：派工、报工、首件确认、工序推进与异常同步。" icon={Play} />
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr><th>工单</th><th>产品</th><th>产线</th><th>状态</th><th>进度</th><th>动作</th></tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td><strong>{order.id}</strong><span>{order.customer}</span></td>
-                <td>{order.sku}</td>
-                <td>{order.line}</td>
-                <td><StatusPill status={order.status} /></td>
-                <td><Progress value={order.progress} tone="blue" /></td>
-                <td>
-                  <button className="icon-action" type="button" onClick={() => onAdvance(order.id)} disabled={busyAction === order.id}>
-                    <CheckCircle2 size={16} /> 报工
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function KanbanCenter({
-  snapshot,
-  onPublish,
-  busyAction,
-}: {
-  snapshot: Snapshot;
-  onPublish: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const boards = snapshot.kanbanBoards;
-  const published = boards.filter((board) => board.status === "已发布").length;
-  const widgetCount = boards.reduce((sum, board) => sum + board.widgets.length, 0);
-  const avgOee = Math.round(snapshot.lines.reduce((sum, line) => sum + line.oee, 0) / Math.max(snapshot.lines.length, 1));
-  const riskCount = snapshot.orders.filter((order) => order.status !== "正常").length;
-
-  return (
-    <section className="view-stack">
-      <ViewHeader title="看板中心与生产统计" subtitle="面向管理层、车间和质量团队配置可发布的实时看板，把生产状态、指标、异常和投屏布局统一管理。" icon={LayoutDashboard} />
-      <div className="kanban-command">
-        <div>
-          <span className="ai-state"><RadioTower size={15} /> Live production boards</span>
-          <h2>让不同 ToB 角色拿起就能看见自己的现场</h2>
-          <p>看板不是固定报表，而是按受众、范围、刷新频率和组件组合发布。发布动作会进入事件流和审计，用于首厂上线、班组投屏和集团运营复盘。</p>
-        </div>
-        <div className="kanban-live-grid">
-          <article><span>准交预测</span><strong>{Math.max(82, 98 - riskCount * 3)}%</strong></article>
-          <article><span>平均 OEE</span><strong>{avgOee}%</strong></article>
-          <article><span>待处理异常</span><strong>{riskCount + snapshot.qualityIssues.filter((issue) => issue.status !== "已关闭").length}</strong></article>
-        </div>
-      </div>
-      <div className="metric-grid">
-        <article className="metric-card green"><span>已发布看板</span><strong>{published}/{boards.length}</strong><small>Board release</small></article>
-        <article className="metric-card blue"><span>组件总数</span><strong>{widgetCount}</strong><small>Widgets</small></article>
-        <article className="metric-card amber"><span>最快刷新</span><strong>15s</strong><small>Shopfloor live</small></article>
-        <article className="metric-card red"><span>投屏场景</span><strong>3</strong><small>COO / 车间 / QA</small></article>
-      </div>
-      <div className="kanban-grid">
-        {boards.map((board) => (
-          <KanbanCard board={board} snapshot={snapshot} onPublish={onPublish} busyAction={busyAction} key={board.id} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function KanbanCard({
-  board,
-  snapshot,
-  onPublish,
-  busyAction,
-}: {
-  board: KanbanBoard;
-  snapshot: Snapshot;
-  onPublish: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const line = snapshot.lines[board.id === "KB-SHOP" ? 1 : 0] || snapshot.lines[0];
-  const openIssues = snapshot.qualityIssues.filter((issue) => issue.status !== "已关闭").length;
-  const progress = board.status === "已发布" ? 100 : board.status === "变更中" ? 68 : 28;
-
-  return (
-    <article className={`kanban-card ${board.status === "已发布" ? "released" : ""}`}>
-      <div className="card-head">
-        <div><strong>{board.name}</strong><span>{board.id} · {board.audience}</span></div>
-        <span className={board.status === "已发布" ? "stock-badge" : "stock-badge danger"}>{board.status}</span>
-      </div>
-      <div className="kanban-preview">
-        <div className="preview-top">
-          <span>{board.layout}</span>
-          <em>{board.refreshRate}</em>
-        </div>
-        <div className="preview-metrics">
-          <article><span>{line?.name || "产线"}</span><strong>{line?.oee || 0}%</strong><small>OEE</small></article>
-          <article><span>工单进度</span><strong>{Math.round(snapshot.orders.reduce((sum, order) => sum + order.progress, 0) / Math.max(snapshot.orders.length, 1))}%</strong><small>MES</small></article>
-          <article><span>质量待闭环</span><strong>{openIssues}</strong><small>QMS</small></article>
-        </div>
-        <Progress value={progress} tone={board.status === "已发布" ? "green" : "amber"} />
-      </div>
-      <dl className="kanban-meta">
-        <div><dt>范围</dt><dd>{board.scope}</dd></div>
-        <div><dt>负责人</dt><dd>{board.owner}</dd></div>
-        <div><dt>上次发布</dt><dd>{board.lastPublished}</dd></div>
-      </dl>
-      <div className="kanban-widgets">
-        <strong>看板组件</strong>
-        <div>{board.widgets.map((widget) => <span key={widget}>{widget}</span>)}</div>
-      </div>
-      <footer>
-        <span><RadioTower size={15} /> {board.status === "已发布" ? "已进入实时刷新" : "等待发布到角色工作台"}</span>
-        <button className="button secondary" type="button" onClick={() => onPublish(board.id)} disabled={busyAction === board.id || board.status === "已发布"}>
-          <LayoutDashboard size={16} /> {board.status === "已发布" ? "已发布" : "发布看板"}
-        </button>
-      </footer>
+      <button className="small-action" type="button" onClick={() => onAccept(item.id)} disabled={busy === item.id || item.accepted}>
+        {item.accepted ? "已执行" : "执行"}
+      </button>
     </article>
   );
 }
 
-function MobileWorkstation({
-  tasks,
-  onComplete,
-  busyAction,
-}: {
-  tasks: MobileTask[];
-  onComplete: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const [scanCode, setScanCode] = useState(tasks.find((task) => task.status === "待执行")?.scanCode || "");
-  const pendingTasks = tasks.filter((task) => task.status !== "已完成");
-  const completed = tasks.length - pendingTasks.length;
-  const matchedTask = tasks.find((task) => task.scanCode.toLowerCase() === scanCode.trim().toLowerCase());
-  const sampleTask = pendingTasks[0] || tasks[0];
-
+function IssueCard({ item, busy, onClose }: { item: QualityIssue; busy: string | null; onClose: (id: string) => void }) {
   return (
-    <section className="view-stack">
-      <ViewHeader title="移动现场与扫码作业" subtitle="面向班组、仓库、质检的手机/PDA 工作台：扫码、确认、回写、审计一次完成。" icon={Smartphone} />
-      <div className="mobile-workspace">
-        <div className="handheld-frame">
-          <div className="phone-speaker" />
-          <div className="mobile-screen">
-            <div className="mobile-status">
-              <span>现场在线</span>
-              <strong>{completed}/{tasks.length}</strong>
-            </div>
-            <label className="scan-field">
-              <ScanLine size={18} />
-              <input value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="扫描工单 / 批次 / 库位码" />
-            </label>
-            <button className="button primary" type="button" onClick={() => sampleTask && setScanCode(sampleTask.scanCode)} disabled={!sampleTask}>
-              <ScanLine size={16} /> 模拟扫码
-            </button>
-            <article className="scan-result">
-              <span>{matchedTask ? matchedTask.type : "等待扫码"}</span>
-              <strong>{matchedTask?.title || "未匹配现场任务"}</strong>
-              <p>{matchedTask?.instruction || "扫描任务码后，系统会自动匹配工单、物料或批次，并把执行结果写回业务流。"}</p>
-              {matchedTask && (
-                <button className="button secondary" type="button" disabled={busyAction === matchedTask.id || matchedTask.status === "已完成"} onClick={() => onComplete(matchedTask.id)}>
-                  <CheckCircle2 size={16} /> {matchedTask.status === "已完成" ? "已完成" : "确认执行"}
-                </button>
-              )}
-            </article>
-          </div>
-        </div>
-        <div className="mobile-task-board">
-          <div className="metric-grid mobile-metrics">
-            <article className="metric-card green"><span>待执行任务</span><strong>{pendingTasks.length}</strong><small>扫码队列</small></article>
-            <article className="metric-card blue"><span>已完成</span><strong>{completed}</strong><small>回写业务流</small></article>
-            <article className="metric-card amber"><span>支持场景</span><strong>3 类</strong><small>报工/发料/质检</small></article>
-          </div>
-          <div className="mobile-task-list">
-            {tasks.map((task) => (
-              <article className="mobile-task-card" key={task.id}>
-                <div className="card-head">
-                  <div><strong>{task.title}</strong><span>{task.owner} · {task.scanCode}</span></div>
-                  <span className={task.status === "已完成" ? "stock-badge" : "stock-badge danger"}>{task.status}</span>
-                </div>
-                <p>{task.instruction}</p>
-                <footer>
-                  <span>{task.type} · {task.target}</span>
-                  <button className="icon-action" type="button" onClick={() => setScanCode(task.scanCode)}>
-                    <ScanLine size={15} /> 扫码
-                  </button>
-                </footer>
-              </article>
-            ))}
-          </div>
-        </div>
+    <article className="work-card">
+      <div>
+        <strong>{item.id} · {item.batch}</strong>
+        <span>{item.source} / {item.owner} / 根因：{item.rootCause}</span>
       </div>
-    </section>
-  );
-}
-
-function Quality({
-  issues,
-  onClose,
-  onInspect,
-  busyAction,
-}: {
-  issues: QualityIssue[];
-  onClose: (id: string) => void;
-  onInspect: (id: string) => void;
-  busyAction: string | null;
-}) {
-  return (
-    <section className="view-stack">
-      <ViewHeader title="质量追溯与偏差闭环" subtitle="质量问题进入任务闭环，关联批次、工序、责任人和根因。" icon={ClipboardCheck} />
-      <div className="issue-grid">
-        {issues.map((issue) => (
-          <article className="issue-card" key={issue.id}>
-            <div className="card-head">
-              <strong>{issue.id}</strong>
-              <span className={`severity ${issue.severity}`}>{issue.severity}</span>
-            </div>
-            <h3>{issue.rootCause}</h3>
-            <dl>
-              <div><dt>批次</dt><dd>{issue.batch}</dd></div>
-              <div><dt>来源</dt><dd>{issue.source}</dd></div>
-              <div><dt>负责人</dt><dd>{issue.owner}</dd></div>
-              <div><dt>状态</dt><dd>{issue.status}</dd></div>
-            </dl>
-            <button
-              className="button secondary"
-              type="button"
-              disabled={busyAction === issue.id}
-              onClick={() => (issue.status === "已关闭" ? onInspect(issue.id) : onClose(issue.id))}
-            >
-              <ShieldCheck size={16} /> {issue.status === "已关闭" ? "查看追溯" : "关闭偏差"}
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Inventory({ materials, onReplenish, busyAction }: { materials: Material[]; onReplenish: (id: string) => void; busyAction: string | null }) {
-  return (
-    <section className="view-stack">
-      <ViewHeader title="物料库存与齐套分析" subtitle="库存不是静态表格，而是影响工单交付风险的实时约束。" icon={Boxes} />
-      <div className="inventory-grid">
-        {materials.map((material) => {
-          const ratio = Math.round((material.stock / material.safeStock) * 100);
-          const low = material.stock < material.safeStock;
-          return (
-            <article className="material-card" key={material.id}>
-              <div className="card-head">
-                <div><strong>{material.id}</strong><span>{material.location}</span></div>
-                <span className={low ? "stock-badge danger" : "stock-badge"}>{low ? "低库存" : "充足"}</span>
-              </div>
-              <h3>{material.name}</h3>
-              <Progress value={Math.min(ratio, 120)} tone={low ? "amber" : "green"} />
-              <p>{material.stock} / 安全库存 {material.safeStock}</p>
-              <div className="blockers">{material.linkedOrders.map((order) => <span key={order}>{order}</span>)}</div>
-              <button className="button secondary" type="button" onClick={() => onReplenish(material.id)} disabled={busyAction === material.id}>
-                <RefreshCw size={16} /> 创建补货
-              </button>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function MRP({ snapshot, onReplenish, busyAction }: { snapshot: Snapshot; onReplenish: (id: string) => void; busyAction: string | null }) {
-  const lowMaterials = snapshot.materials.filter((material) => material.stock < material.safeStock);
-  return (
-    <section className="view-stack">
-      <ViewHeader title="主计划与 MRP" subtitle="把销售订单、预测、库存、安全库存、产能与生产订单放在同一张计划工作台里。" icon={CalendarClock} />
-      <div className="erp-workspace">
-        <Panel title="计划例外" icon={AlertTriangle}>
-          <div className="dense-list">
-            {lowMaterials.map((material) => (
-              <div className="stock-row" key={material.id}>
-                <strong>{material.id}</strong>
-                <span>{material.name} · 影响 {material.linkedOrders.join(" / ")}</span>
-                <Progress value={Math.round((material.stock / material.safeStock) * 100)} tone="amber" />
-              </div>
-            ))}
-          </div>
-        </Panel>
-        <Panel title="供应建议" icon={CalendarClock}>
-          <div className="suggestion-table">
-            {lowMaterials.map((material) => (
-              <article key={material.id}>
-                <strong>{material.name}</strong>
-                <span>建议补货 {material.safeStock + 260 - material.stock} · 提前期 2 天 · 来源 MRP</span>
-                <button className="icon-action" type="button" disabled={busyAction === material.id} onClick={() => onReplenish(material.id)}>
-                  <ShoppingCart size={15} /> 生成采购申请
-                </button>
-              </article>
-            ))}
-          </div>
-        </Panel>
-        <Panel title="产能粗排" icon={Activity}>
-          <LineLoad lines={snapshot.lines} />
-        </Panel>
-      </div>
-    </section>
-  );
-}
-
-function Procurement({ snapshot, onReplenish, busyAction }: { snapshot: Snapshot; onReplenish: (id: string) => void; busyAction: string | null }) {
-  const suppliers = [
-    { name: "恒远包材", score: "A-", risk: "交付稳定", material: snapshot.materials[0] },
-    { name: "启明电子", score: "B+", risk: "价格波动", material: snapshot.materials[2] },
-    { name: "北岭五金", score: "B", risk: "需复核交期", material: snapshot.materials[3] },
-  ];
-  return (
-    <section className="view-stack">
-      <ViewHeader title="采购与供应商协同" subtitle="从缺料风险进入询价、采购申请、供应商绩效和到货承诺管理。" icon={ShoppingCart} />
-      <div className="config-grid">
-        {suppliers.map((supplier) => (
-          <article className="config-card" key={supplier.name}>
-            <div className="card-head">
-              <div><strong>{supplier.name}</strong><span>供应商评分 {supplier.score}</span></div>
-              <span className={supplier.risk.includes("复核") ? "stock-badge danger" : "stock-badge"}>{supplier.risk}</span>
-            </div>
-            <p>关联物料：{supplier.material?.name || "待分配"}。支持采购申请、价格协议、到货承诺和供应异常升级。</p>
-            {supplier.material && (
-              <button className="button secondary" type="button" disabled={busyAction === supplier.material.id} onClick={() => onReplenish(supplier.material.id)}>
-                <ShoppingCart size={16} /> 创建采购申请
-              </button>
-            )}
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Costing({ snapshot, onSync, busyAction }: { snapshot: Snapshot; onSync: (id: string) => void; busyAction: string | null }) {
-  const totalProgress = snapshot.orders.reduce((sum, order) => sum + order.progress, 0);
-  const estimatedWip = Math.round(totalProgress * 1280);
-  const variance = snapshot.qualityIssues.filter((issue) => issue.status !== "已关闭").length * 2.4;
-  return (
-    <section className="view-stack">
-      <ViewHeader title="成本与财务过账" subtitle="把生产报工、物料消耗、质量偏差和采购价格联动到 WIP、成本差异与 ERP 凭证。" icon={Calculator} />
-      <div className="metric-grid">
-        <article className="metric-card blue"><span>在制品估值</span><strong>¥{estimatedWip.toLocaleString()}</strong><small>WIP valuation</small></article>
-        <article className="metric-card amber"><span>成本差异</span><strong>{variance.toFixed(1)}%</strong><small>Production variance</small></article>
-        <article className="metric-card green"><span>待过账报工</span><strong>{snapshot.orders.filter((order) => order.progress > 50).length}</strong><small>MES journals</small></article>
-        <article className="metric-card red"><span>质量成本事件</span><strong>{snapshot.qualityIssues.filter((issue) => issue.status !== "已关闭").length}</strong><small>QMS impact</small></article>
-      </div>
-      <div className="config-grid">
-        {snapshot.integrations.map((integration) => (
-          <article className="config-card" key={integration.id}>
-            <div className="card-head">
-              <div><strong>{integration.name}</strong><span>{integration.type} · 财务/供应链接口</span></div>
-              <span className={integration.status === "告警" ? "stock-badge danger" : "stock-badge"}>{integration.status}</span>
-            </div>
-            <p>最近同步：{integration.lastSync}。用于成本凭证、采购单、库存交易和财务对账。</p>
-            <button className="button secondary" type="button" onClick={() => onSync(integration.id)} disabled={busyAction === integration.id}>
-              <PlugZap size={16} /> 同步凭证
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function FactoryModel({
-  lines,
-  onInspect,
-  busyAction,
-}: {
-  lines: Line[];
-  onInspect: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const nodes = [
-    { id: "TENANT", label: "集团租户", icon: Users, meta: "多租户隔离" },
-    { id: "PLANT-EAST", label: "华东一厂", icon: Factory, meta: "组织与权限" },
-    ...lines.map((line) => ({ id: line.id, label: line.name, icon: Route, meta: `${line.status} · OEE ${line.oee}%` })),
-    { id: "QC", label: "质检中心", icon: ShieldCheck, meta: "批次追溯" },
-    { id: "WH", label: "中央仓", icon: Boxes, meta: "齐套与库位" },
-    { id: "EAM", label: "设备台账", icon: Wrench, meta: "点检维保" },
-  ];
-  return (
-    <section className="view-stack">
-      <ViewHeader title="工厂建模" subtitle="把组织、工厂、产线、工位、设备、人员和权限建成可复用的数字对象。" icon={GitBranch} />
-      <div className="model-canvas">
-        {nodes.map((node, index) => {
-          const Icon = node.icon;
-          return (
-            <button
-              className={`model-node node-${index}`}
-              key={`${node.label}-${index}`}
-              type="button"
-              onClick={() => onInspect(node.id)}
-            >
-              <Icon size={20} />
-              <strong>{node.label}</strong>
-              <span>{node.meta}</span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function ProcessRoutes({
-  routes,
-  onPublish,
-  busyAction,
-}: {
-  routes: ProcessRoute[];
-  onPublish: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const published = routes.filter((route) => route.status === "已发布").length;
-  const totalSteps = routes.reduce((sum, route) => sum + route.steps.length, 0);
-  const releasedSteps = routes.reduce((sum, route) => sum + route.steps.filter((step) => step.status === "已发布").length, 0);
-  const bomLines = routes.reduce((sum, route) => sum + route.bom.length, 0);
-
-  return (
-    <section className="view-stack">
-      <ViewHeader title="工艺路线与 BOM" subtitle="把产品版本、物料清单、工序、质检点、SOP 和二维码发布到现场执行，形成可追溯的工程主数据。" icon={ClipboardList} />
-      <div className="metric-grid">
-        <article className="metric-card green"><span>已发布路线</span><strong>{published}/{routes.length}</strong><small>Route release</small></article>
-        <article className="metric-card blue"><span>工序发布率</span><strong>{Math.round((releasedSteps / Math.max(totalSteps, 1)) * 100)}%</strong><small>Operation steps</small></article>
-        <article className="metric-card amber"><span>BOM 行数</span><strong>{bomLines}</strong><small>Material master</small></article>
-        <article className="metric-card red"><span>现场二维码</span><strong>{routes.length}</strong><small>QR to SOP</small></article>
-      </div>
-      <div className="route-grid">
-        {routes.map((route) => {
-          const routeProgress = Math.round((route.steps.filter((step) => step.status === "已发布").length / route.steps.length) * 100);
-          return (
-            <article className={`route-card ${route.status === "已发布" ? "released" : ""}`} key={route.id}>
-              <div className="card-head">
-                <div><strong>{route.product}</strong><span>{route.id} · {route.version} · {route.line}</span></div>
-                <span className={route.status === "已发布" ? "stock-badge" : "stock-badge danger"}>{route.status}</span>
-              </div>
-              <div className="route-release">
-                <div>
-                  <span>发布完成度</span>
-                  <strong>{routeProgress}%</strong>
-                </div>
-                <Progress value={routeProgress} tone={route.status === "已发布" ? "green" : "amber"} />
-              </div>
-              <div className="route-meta">
-                <div><span>负责人</span><strong>{route.owner}</strong></div>
-                <div><span>标准节拍</span><strong>{route.cycleTime}</strong></div>
-                <div><span>现场码</span><strong>{route.qrCode}</strong></div>
-              </div>
-              <div className="bom-list">
-                <strong>BOM 管理</strong>
-                {route.bom.map((item) => (
-                  <div key={`${route.id}-${item.id}`}>
-                    <span>{item.id}</span>
-                    <p>{item.material}</p>
-                    <em>{item.qty} {item.uom} · 损耗 {item.scrap}</em>
-                  </div>
-                ))}
-              </div>
-              <div className="operation-list">
-                <strong>工序与质检点</strong>
-                {route.steps.map((step) => (
-                  <div className={step.status === "已发布" ? "done" : ""} key={`${route.id}-${step.sequence}`}>
-                    <span>{step.sequence}</span>
-                    <p>
-                      <strong>{step.name}</strong>
-                      <small>{step.station} · {step.equipment} · {step.qualityGate}</small>
-                    </p>
-                    <em>{step.sop}</em>
-                  </div>
-                ))}
-              </div>
-              <footer>
-                <span><ScanLine size={15} /> {route.qrCode} 可用于移动端扫码作业指导</span>
-                <button className="button secondary" type="button" onClick={() => onPublish(route.id)} disabled={busyAction === route.id || route.status === "已发布"}>
-                  <ClipboardList size={16} /> {route.status === "已发布" ? "已发布" : "发布路线"}
-                </button>
-              </footer>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function EquipmentResources({
-  assets,
-  onCheck,
-  busyAction,
-}: {
-  assets: EquipmentAsset[];
-  onCheck: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const warningCount = assets.filter((asset) => asset.status === "告警" || asset.status === "停机" || asset.status === "保养中").length;
-  const avgHealth = Math.round(assets.reduce((sum, asset) => sum + asset.health, 0) / Math.max(assets.length, 1));
-  const avgOee = Math.round(assets.reduce((sum, asset) => sum + asset.oee, 0) / Math.max(assets.length, 1));
-  return (
-    <section className="view-stack">
-      <ViewHeader title="设备资源与 IoT 点检" subtitle="把设备台账、传感器、点检保养和产线影响联动到生产执行与流程审计。" icon={Wrench} />
-      <div className="metric-grid">
-        <article className="metric-card green"><span>设备健康均值</span><strong>{avgHealth}%</strong><small>IoT health</small></article>
-        <article className="metric-card blue"><span>平均 OEE</span><strong>{avgOee}%</strong><small>Asset OEE</small></article>
-        <article className="metric-card amber"><span>待点检/告警</span><strong>{warningCount}</strong><small>Exception assets</small></article>
-        <article className="metric-card red"><span>设备台账</span><strong>{assets.length}</strong><small>Resources</small></article>
-      </div>
-      <div className="equipment-grid">
-        {assets.map((asset) => {
-          const tone = asset.status === "告警" || asset.status === "停机" ? "amber" : asset.status === "保养中" ? "blue" : "green";
-          return (
-            <article className="equipment-card" key={asset.id}>
-              <div className="card-head">
-                <div><strong>{asset.name}</strong><span>{asset.plant} · {asset.line} · {asset.id}</span></div>
-                <span className={asset.status === "运行" ? "stock-badge" : "stock-badge danger"}>{asset.status}</span>
-              </div>
-              <div className="equipment-health">
-                <div><span>健康分</span><strong>{asset.health}%</strong></div>
-                <Progress value={asset.health} tone={tone} />
-              </div>
-              <div className="sensor-grid">
-                <div><span>OEE</span><strong>{asset.oee}%</strong></div>
-                <div><span>温度</span><strong>{asset.temperature}°C</strong></div>
-                <div><span>振动</span><strong>{asset.vibration.toFixed(1)}</strong></div>
-                <div><span>下次保养</span><strong>{asset.nextMaintenance}</strong></div>
-              </div>
-              <div className="template-chips">{asset.sensors.map((sensor) => <span key={sensor}>{sensor}</span>)}</div>
-              <footer>
-                <span>{asset.owner} · 关联产线 {asset.line}</span>
-                <button className="button secondary" type="button" onClick={() => onCheck(asset.id)} disabled={busyAction === asset.id}>
-                  <Wrench size={16} /> 完成点检
-                </button>
-              </footer>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function DataIntelligence({
-  snapshot,
-  onResolve,
-  busyAction,
-}: {
-  snapshot: Snapshot;
-  onResolve: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const insights = snapshot.intelligenceInsights;
-  const pending = insights.filter((insight) => insight.status === "待处理");
-  const highRisk = pending.filter((insight) => insight.severity === "高").length;
-  const matrix = [
-    { label: "准交预测", value: `${Math.max(86, 98 - snapshot.orders.filter((order) => order.status !== "正常").length * 3)}%`, source: "订单/排程", tone: "green" },
-    { label: "库存健康", value: `${snapshot.materials.filter((item) => item.stock >= item.safeStock).length}/${snapshot.materials.length}`, source: "WMS/MRP", tone: "amber" },
-    { label: "设备健康", value: `${Math.round(snapshot.equipmentAssets.reduce((sum, asset) => sum + asset.health, 0) / Math.max(snapshot.equipmentAssets.length, 1))}%`, source: "IoT/EAM", tone: "blue" },
-    { label: "质量闭环", value: `${snapshot.qualityIssues.filter((issue) => issue.status === "已关闭").length}/${snapshot.qualityIssues.length}`, source: "QMS/CAPA", tone: "red" },
-  ];
-
-  return (
-    <section className="view-stack">
-      <ViewHeader title="数据智能平台" subtitle="把订单、库存、质量、设备和成本数据变成预测洞察、经营指标和可审计处置动作。" icon={LineChart} />
-      <div className="intelligence-hero">
-        <div>
-          <span className="ai-state"><BrainCircuit size={15} /> Decision intelligence</span>
-          <h2>从跨系统信号到业务动作</h2>
-          <p>每条洞察都带来源、指标、影响对象、负责人和建议动作，适合经营层复核，也能下钻给计划、质量、设备与物料角色执行。</p>
-        </div>
-        <div className="intelligence-summary">
-          <article><strong>{pending.length}</strong><span>待处理洞察</span></article>
-          <article><strong>{highRisk}</strong><span>高优先级</span></article>
-          <article><strong>{snapshot.auditLogs.length}</strong><span>审计记录</span></article>
-        </div>
-      </div>
-      <div className="metric-grid">
-        {matrix.map((item) => (
-          <article className={`metric-card ${item.tone}`} key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <small>{item.source}</small>
-          </article>
-        ))}
-      </div>
-      <div className="intelligence-layout">
-        <div className="insight-grid">
-          {insights.map((insight) => (
-            <InsightCard insight={insight} onResolve={onResolve} busyAction={busyAction} key={insight.id} />
-          ))}
-        </div>
-        <Panel title="数据血缘与落地口径" icon={Database}>
-          <div className="lineage-list">
-            {[
-              ["订单", "ERP/CRM 导入销售订单，进入 APS 和 MES 工单。"],
-              ["现场", "移动报工、IoT 点检、质量检验持续回写事实数据。"],
-              ["智能", "规则、预测与工业智能体共同生成可解释建议。"],
-              ["闭环", "每次处理都会更新业务对象、事件流与审计日志。"],
-            ].map(([label, body]) => (
-              <article key={label}>
-                <strong>{label}</strong>
-                <span>{body}</span>
-              </article>
-            ))}
-          </div>
-        </Panel>
-      </div>
-    </section>
-  );
-}
-
-function InsightCard({
-  insight,
-  onResolve,
-  busyAction,
-}: {
-  insight: IntelligenceInsight;
-  onResolve: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const progress = Math.max(12, Math.min(100, Number.parseInt(insight.value, 10) || (insight.status === "已处理" ? 100 : 58)));
-  const tone = insight.severity === "高" ? "red" : insight.severity === "中" ? "amber" : "green";
-  return (
-    <article className={`insight-card ${insight.status === "已处理" ? "resolved" : ""}`}>
-      <div className="card-head">
-        <div><strong>{insight.title}</strong><span>{insight.domain} · {insight.id} · {insight.linkedEntity}</span></div>
-        <span className={insight.status === "已处理" ? "stock-badge" : "stock-badge danger"}>{insight.status}</span>
-      </div>
-      <div className="insight-kpi">
-        <div>
-          <span>{insight.metric}</span>
-          <strong>{insight.value}</strong>
-          <em>{insight.change}</em>
-        </div>
-        <Progress value={progress} tone={tone} />
-      </div>
-      <dl className="insight-meta">
-        <div><dt>数据来源</dt><dd>{insight.source}</dd></div>
-        <div><dt>负责人</dt><dd>{insight.owner}</dd></div>
-      </dl>
-      <p>{insight.recommendation}</p>
-      <footer>
-        <span className={`severity ${insight.severity}`}>{insight.severity}</span>
-        <button className="button secondary" type="button" onClick={() => onResolve(insight.id)} disabled={busyAction === insight.id || insight.status === "已处理"}>
-          <CheckCircle2 size={16} /> {insight.status === "已处理" ? "已闭环" : "处理洞察"}
-        </button>
-      </footer>
+      <span className={`severity ${item.severity}`}>{item.severity}</span>
+      <StatusPill value={item.status} />
+      <button className="small-action" type="button" onClick={() => onClose(item.id)} disabled={busy === item.id || item.status === "已关闭"}>
+        关闭
+      </button>
     </article>
   );
 }
 
-function Agent({ snapshot, onAccept, busyAction }: { snapshot: Snapshot; onAccept: (id: string) => void; busyAction: string | null }) {
+function MaterialCard({ item, busy, onReplenish }: { item: Material; busy: string | null; onReplenish: (id: string) => void }) {
+  const risk = item.stock < item.safeStock;
   return (
-    <section className="view-stack">
-      <ViewHeader title="工业智能体" subtitle="把报表、异常和排程约束翻译成下一步动作。" icon={BrainCircuit} />
-      <div className="agent-layout">
-        <Panel title="待确认建议" icon={Sparkles}>
-          <RecommendationList recommendations={snapshot.recommendations} onAccept={onAccept} busyAction={busyAction} />
-        </Panel>
-        <Panel title="智能体上下文" icon={Activity}>
-          <EventFeed events={snapshot.events} />
-        </Panel>
+    <article className="work-card">
+      <div>
+        <strong>{item.id} · {item.name}</strong>
+        <span>{item.location} / 关联 {item.linkedOrders.join("、")}</span>
       </div>
-    </section>
-  );
-}
-
-function Rules({ rules, onToggle, busyAction }: { rules: Rule[]; onToggle: (id: string) => void; busyAction: string | null }) {
-  return (
-    <section className="view-stack">
-      <ViewHeader title="规则配置" subtitle="将预警、升级、派工与同步策略产品化，支持租户级配置和审计。" icon={Settings2} />
-      <div className="config-grid">
-        {rules.map((rule) => (
-          <article className="config-card" key={rule.id}>
-            <div className="card-head">
-              <div><strong>{rule.name}</strong><span>{rule.module} · {rule.id}</span></div>
-              <span className={rule.enabled ? "stock-badge" : "stock-badge muted-badge"}>{rule.enabled ? "启用" : "停用"}</span>
-            </div>
-            <p>{rule.threshold}</p>
-            <button className="button secondary" type="button" onClick={() => onToggle(rule.id)} disabled={busyAction === rule.id}>
-              <Settings2 size={16} /> {rule.enabled ? "停用规则" : "启用规则"}
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function IndustryTemplates({
-  templates,
-  onApply,
-  busyAction,
-}: {
-  templates: IndustryTemplate[];
-  onApply: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const activeTemplate = templates.find((template) => template.status === "已启用") || templates[0];
-  return (
-    <section className="view-stack">
-      <ViewHeader title="行业配置模板" subtitle="把模块、角色权限、字段和上线节奏组件化，让不同制造客户从模板开始，而不是从零定制。" icon={Layers3} />
-      <div className="template-hero">
-        <div>
-          <span className="ai-state"><Settings2 size={15} /> 当前启用</span>
-          <h2>{activeTemplate?.name}</h2>
-          <p>{activeTemplate?.fit}</p>
-        </div>
-        <div className="template-stats">
-          <article><strong>{activeTemplate?.modules.length || 0}</strong><span>模块组件</span></article>
-          <article><strong>{activeTemplate?.roles.length || 0}</strong><span>角色模板</span></article>
-          <article><strong>{activeTemplate?.fields.length || 0}</strong><span>扩展字段</span></article>
-        </div>
-      </div>
-      <div className="template-grid">
-        {templates.map((template) => (
-          <article className={`template-card ${template.status === "已启用" ? "enabled" : ""}`} key={template.id}>
-            <div className="card-head">
-              <div><strong>{template.name}</strong><span>{template.industry} · {template.id}</span></div>
-              <span className={template.status === "已启用" ? "stock-badge" : "stock-badge muted-badge"}>{template.status}</span>
-            </div>
-            <p>{template.fit}</p>
-            <div className="template-section">
-              <strong>模块组件</strong>
-              <div className="template-chips">{template.modules.map((item) => <span key={item}>{item}</span>)}</div>
-            </div>
-            <div className="template-section">
-              <strong>角色权限</strong>
-              <div className="template-chips">{template.roles.map((item) => <span key={item}>{item}</span>)}</div>
-            </div>
-            <div className="template-section">
-              <strong>扩展字段</strong>
-              <div className="template-chips">{template.fields.map((item) => <span key={item}>{item}</span>)}</div>
-            </div>
-            <footer>
-              <span>{template.rollout}</span>
-              <button className="button secondary" type="button" onClick={() => onApply(template.id)} disabled={busyAction === template.id || template.status === "已启用"}>
-                <Layers3 size={16} /> {template.status === "已启用" ? "已启用" : "启用模板"}
-              </button>
-            </footer>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function WorkflowEngine({
-  workflows,
-  onAdvance,
-  busyAction,
-}: {
-  workflows: WorkflowInstance[];
-  onAdvance: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const activeCount = workflows.filter((workflow) => workflow.status !== "已完成").length;
-  const avgProgress = Math.round(
-    workflows.reduce((sum, workflow) => sum + ((workflow.currentStep + 1) / workflow.steps.length) * 100, 0) / Math.max(workflows.length, 1),
-  );
-  return (
-    <section className="view-stack">
-      <ViewHeader title="流程引擎与工艺路线" subtitle="把生产变更、质量 CAPA、采购审批配置成跨角色流程，按节点推进并全程审计。" icon={GitPullRequestArrow} />
-      <div className="metric-grid">
-        <article className="metric-card green"><span>运行中流程</span><strong>{activeCount}</strong><small>跨部门实例</small></article>
-        <article className="metric-card blue"><span>平均进度</span><strong>{avgProgress}%</strong><small>节点完成率</small></article>
-        <article className="metric-card amber"><span>流程模板</span><strong>{workflows.length}</strong><small>生产/质量/采购</small></article>
-        <article className="metric-card red"><span>审计策略</span><strong>100%</strong><small>节点推进留痕</small></article>
-      </div>
-      <div className="workflow-grid">
-        {workflows.map((workflow) => {
-          const progress = Math.round(((workflow.currentStep + 1) / workflow.steps.length) * 100);
-          return (
-            <article className="workflow-card" key={workflow.id}>
-              <div className="card-head">
-                <div><strong>{workflow.name}</strong><span>{workflow.category} · {workflow.businessKey}</span></div>
-                <span className={workflow.status === "已完成" ? "stock-badge" : "stock-badge danger"}>{workflow.status}</span>
-              </div>
-              <p>{workflow.route}</p>
-              <Progress value={progress} tone={workflow.status === "已完成" ? "green" : "amber"} />
-              <div className="workflow-steps">
-                {workflow.steps.map((step, index) => (
-                  <div className={index < workflow.currentStep ? "done" : index === workflow.currentStep ? "active" : ""} key={step}>
-                    <span>{index + 1}</span>
-                    <strong>{step}</strong>
-                  </div>
-                ))}
-              </div>
-              <footer>
-                <span>{workflow.owner} · SLA {workflow.sla}</span>
-                <button className="button secondary" type="button" onClick={() => onAdvance(workflow.id)} disabled={busyAction === workflow.id || workflow.status === "已完成"}>
-                  <GitPullRequestArrow size={16} /> {workflow.status === "已完成" ? "已归档" : "推进节点"}
-                </button>
-              </footer>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function Integrations({ integrations, onSync, busyAction }: { integrations: Integration[]; onSync: (id: string) => void; busyAction: string | null }) {
-  return (
-    <section className="view-stack">
-      <ViewHeader title="开放集成" subtitle="ERP、PLM、WMS、Webhook 和事件订阅统一纳入连接状态与审计。" icon={PlugZap} />
-      <div className="config-grid">
-        {integrations.map((integration) => (
-          <article className="config-card" key={integration.id}>
-            <div className="card-head">
-              <div><strong>{integration.name}</strong><span>{integration.type} · {integration.id}</span></div>
-              <span className={integration.status === "告警" ? "stock-badge danger" : "stock-badge"}>{integration.status}</span>
-            </div>
-            <p>最近同步：{integration.lastSync}</p>
-            <button className="button secondary" type="button" onClick={() => onSync(integration.id)} disabled={busyAction === integration.id}>
-              <PlugZap size={16} /> 手动同步
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Audit({ logs }: { logs: AuditLog[] }) {
-  return (
-    <section className="view-stack">
-      <ViewHeader title="审计日志" subtitle="生产、质量、库存、规则和集成动作均写入不可忽略的操作轨迹。" icon={FileClock} />
-      <div className="table-card">
-        <table>
-          <thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>对象</th></tr></thead>
-          <tbody>
-            {logs.map((log) => (
-              <tr key={log.id}><td>{log.createdAt}</td><td>{log.actor}</td><td>{log.action}</td><td>{log.entity}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function Implementation({
-  phases,
-  onAdvance,
-  busyAction,
-}: {
-  phases: ImplementationPhase[];
-  onAdvance: (id: string) => void;
-  busyAction: string | null;
-}) {
-  const packages = [
-    { name: "Starter", scope: "单工厂 MES/QMS/WMS", price: "按工厂 + 现场席位", fit: "首条产线数字化" },
-    { name: "Professional", scope: "APS/MRP + 规则 + 集成 + AI", price: "按模块 + 接口量", fit: "多产线协同" },
-    { name: "Enterprise", scope: "多工厂 + 供应商 + 成本 + 专属 SLA", price: "集团协议 + 实施包", fit: "集团复制与经营平台" },
-  ];
-  const completed = phases.filter((phase) => phase.status === "已完成").length;
-  const active = phases.find((phase) => phase.status === "进行中");
-  const activeIndex = active ? phases.findIndex((phase) => phase.id === active.id) + 1 : phases.length;
-  return (
-    <section className="view-stack">
-      <ViewHeader title="实施蓝图与商业化" subtitle="让销售、实施、IT、业务 Owner 在同一张路线图上推进首厂上线与多工厂复制。" icon={Rocket} />
-      <div className="metric-grid">
-        <article className="metric-card green"><span>首厂上线目标</span><strong>4-8 周</strong><small>从诊断到验收</small></article>
-        <article className="metric-card blue"><span>当前阶段</span><strong>{active ? `第 ${activeIndex} 步` : "已上线"}</strong><small>{active ? `${active.name} · ${active.owner}` : "进入扩厂复制"}</small></article>
-        <article className="metric-card amber"><span>商业套餐</span><strong>3 档</strong><small>Starter to Enterprise</small></article>
-        <article className="metric-card red"><span>上线进度</span><strong>{completed}/{phases.length}</strong><small>阶段已完成</small></article>
-      </div>
-      <div className="implementation-grid">
-        <Panel title="上线阶段" icon={ClipboardList} wide>
-          <div className="phase-list">
-            {phases.map((phase, index) => {
-              const locked = phase.status === "待开始" && Boolean(active);
-              return (
-                <article className="phase-row" key={phase.name}>
-                  <span>{index + 1}</span>
-                  <div>
-                    <strong>{phase.name}</strong>
-                    <small>{phase.owner} · {phase.time}</small>
-                    <p>{phase.detail}</p>
-                  </div>
-                  <div className="phase-actions">
-                    <em className={phase.status === "已完成" ? "done" : phase.status === "进行中" ? "active" : ""}>{phase.status}</em>
-                    <button className="icon-action" type="button" onClick={() => onAdvance(phase.id)} disabled={busyAction === phase.id || locked}>
-                      <CheckCircle2 size={15} />
-                      {locked ? "待前序" : phase.status === "待开始" ? "开始" : phase.status === "进行中" ? "完成" : "复核"}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </Panel>
-        <Panel title="商业套餐" icon={Database}>
-          <div className="package-list">
-            {packages.map((item) => (
-              <article key={item.name}>
-                <strong>{item.name}</strong>
-                <span>{item.scope}</span>
-                <small>{item.price} · {item.fit}</small>
-              </article>
-            ))}
-          </div>
-        </Panel>
-        <Panel title="验收口径" icon={CheckCircle2}>
-          <div className="acceptance-list">
-            {["订单导入并进入排程", "物料齐套与补货建议可执行", "生产报工写入事件和审计", "质量偏差可追溯并关闭", "ERP/PLM/WMS 至少一个接口联通"].map((item) => (
-              <div key={item}><ShieldCheck size={16} /><span>{item}</span></div>
-            ))}
-          </div>
-        </Panel>
-      </div>
-    </section>
-  );
-}
-
-function SystemReadiness({ snapshot }: { snapshot: Snapshot }) {
-  const onlineUsers = snapshot.users.filter((user) => user.status === "在线").length;
-  const items = [
-    ["SQLite 持久化", "已启用"],
-    ["SSE 实时事件", "在线"],
-    ["当前登录", snapshot.currentUser.name],
-    ["在线员工", `${onlineUsers}/${snapshot.users.length}`],
-    ["审计日志", `${snapshot.auditLogs.length} 条`],
-    ["规则引擎", `${snapshot.rules.filter((rule) => rule.enabled).length}/${snapshot.rules.length}`],
-  ];
-  return <div className="readiness-list">{items.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>;
-}
-
-function DatabaseManagement({
-  snapshot,
-  onBackup,
-  onReset,
-  busyAction,
-}: {
-  snapshot: Snapshot;
-  onBackup: () => void;
-  onReset: () => void;
-  busyAction: string | null;
-}) {
-  const admin = snapshot.databaseAdmin;
-  const largestTables = [...admin.tables].sort((a, b) => b.rows - a.rows).slice(0, 8);
-  const latestBackup = admin.backups[0];
-
-  return (
-    <section className="view-stack">
-      <ViewHeader
-        title="系统数据库管理"
-        subtitle="IT/实施管理员视角：查看租户数据表、记录量、SQLite 文件状态、备份与重置动作，并把管理动作写入审计。"
-        icon={Database}
-      />
-      <div className="metric-grid">
-        <article className="metric-card green"><span>数据库状态</span><strong>{admin.status}</strong><small>{admin.engine}</small></article>
-        <article className="metric-card blue"><span>业务表数量</span><strong>{admin.tableCount}</strong><small>Managed tables</small></article>
-        <article className="metric-card amber"><span>总记录数</span><strong>{admin.totalRows}</strong><small>Tenant rows</small></article>
-        <article className="metric-card red"><span>数据库文件</span><strong>{admin.sizeKb}KB</strong><small>WAL {admin.walKb}KB</small></article>
-      </div>
-      <div className="database-layout">
-        <Panel title="数据存储与运维动作" icon={ServerCog}>
-          <div className="database-admin-card">
-            <div><span>数据库路径</span><strong>{admin.path}</strong></div>
-            <div><span>事务模式</span><strong>{admin.mode} · 持久化 SQLite</strong></div>
-            <div><span>最近备份</span><strong>{latestBackup ? `${latestBackup.name} · ${latestBackup.sizeKb}KB` : "暂无备份"}</strong></div>
-          </div>
-          <div className="database-actions">
-            <button className="button primary" type="button" onClick={onBackup} disabled={busyAction === "database-backup"}>
-              <HardDrive size={16} /> 生成数据库备份
-            </button>
-            <button className="button secondary" type="button" onClick={onReset} disabled={busyAction === "reset"}>
-              <RefreshCw size={16} /> 重置演示数据
-            </button>
-          </div>
-        </Panel>
-        <Panel title="最近备份" icon={HardDrive}>
-          <div className="backup-list">
-            {admin.backups.length ? admin.backups.map((backup) => (
-              <article key={backup.id}>
-                <strong>{backup.name}</strong>
-                <span>{backup.sizeKb}KB · {new Date(backup.createdAt).toLocaleString("zh-CN")}</span>
-              </article>
-            )) : <p className="empty-note">还没有备份。点击“生成数据库备份”后会在 data/backups 下生成 SQLite 副本。</p>}
-          </div>
-        </Panel>
-      </div>
-      <Panel title="租户业务表" icon={Database} wide>
-        <div className="database-table-grid">
-          {largestTables.map((table) => (
-            <article key={table.name}>
-              <div>
-                <strong>{table.label}</strong>
-                <span>{table.name}</span>
-              </div>
-              <em>{table.rows} 行</em>
-              <small>{table.columns} 字段</small>
-            </article>
-          ))}
-        </div>
-      </Panel>
-    </section>
-  );
-}
-
-function EmployeePresence({ users, currentUser }: { users: Employee[]; currentUser: Snapshot["currentUser"] }) {
-  return (
-    <div className="employee-presence-list">
-      {users.slice(0, 6).map((user) => (
-        <article className={user.id === currentUser.id ? "active" : ""} key={user.id}>
-          <span className={user.status === "在线" ? "presence-dot online" : "presence-dot"} />
-          <div>
-            <strong>{user.name}</strong>
-            <small>{user.role} · {user.plant}</small>
-          </div>
-          <em>{user.status}</em>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function ViewHeader({ title, subtitle, icon: Icon }: { title: string; subtitle: string; icon: LucideIcon }) {
-  return (
-    <div className="view-header">
-      <div className="view-icon"><Icon size={22} /></div>
-      <div><h2>{title}</h2><p>{subtitle}</p></div>
-    </div>
-  );
-}
-
-function Panel({ title, icon: Icon, children, wide = false }: { title: string; icon: LucideIcon; children: ReactNode; wide?: boolean }) {
-  return (
-    <article className={`panel-card ${wide ? "wide" : ""}`}>
-      <div className="panel-title"><Icon size={18} /><h2>{title}</h2></div>
-      {children}
+      <Progress value={Math.min(100, Math.round((item.stock / item.safeStock) * 100))} />
+      <StatusPill value={risk ? "风险" : "正常"} />
+      <button className="small-action" type="button" onClick={() => onReplenish(item.id)} disabled={busy === item.id || !risk}>
+        补货
+      </button>
     </article>
   );
 }
 
-function RecommendationList({
-  recommendations,
-  onAccept,
-  busyAction,
-}: {
-  recommendations: Recommendation[];
-  onAccept: (id: string) => void;
-  busyAction: string | null;
-}) {
+function IntegrationCard({ item, busy, onSync }: { item: Integration; busy: string | null; onSync: (id: string) => void }) {
   return (
-    <div className="recommendation-list">
-      {recommendations.map((item) => (
-        <article className="recommendation" key={item.id}>
-          <div><span className={`severity ${item.severity}`}>{item.severity}</span><strong>{item.title}</strong></div>
-          <p>{item.body}</p>
-          <footer>
-            <em>{item.impact}</em>
-            <button className="icon-action" type="button" disabled={busyAction === item.id} onClick={() => onAccept(item.id)}>
-              <Sparkles size={15} /> {item.accepted ? "再次执行" : "执行"} <ChevronRight size={14} />
-            </button>
-          </footer>
-        </article>
-      ))}
+    <article className="work-card">
+      <div>
+        <strong>{item.name}</strong>
+        <span>{item.type} / 最近同步 {item.lastSync}</span>
+      </div>
+      <StatusPill value={item.status === "已连接" ? "正常" : item.status === "告警" ? "风险" : "阻塞"} />
+      <button className="small-action" type="button" onClick={() => onSync(item.id)} disabled={busy === item.id}>
+        同步
+      </button>
+    </article>
+  );
+}
+
+function EventPanel({ events }: { events: EventItem[] }) {
+  return (
+    <div className="panel event-panel">
+      <SectionTitle icon={FileClock} title="实时事件流" />
+      <ol>
+        {events.slice(0, 8).map((event) => (
+          <li key={event.id}>
+            <span>{event.time}</span>
+            <strong>{event.type}</strong>
+            <p>{event.message}</p>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
 
-function EventFeed({ events }: { events: EventItem[] }) {
+function Metric({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" | "risk" | "info" }) {
   return (
-    <ol className="event-feed">
-      {events.map((event) => (
-        <li key={event.id}>
-          <BellRing size={15} />
-          <time>{event.time}</time>
-          <span>{event.type}</span>
-          <p><strong>{event.actor || "系统"}</strong>{event.message}</p>
-        </li>
-      ))}
-    </ol>
+    <article className={`metric ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
   );
 }
 
-function LineLoad({ lines }: { lines: Line[] }) {
+function SectionTitle({ icon: Icon, title }: { icon: typeof Factory; title: string }) {
   return (
-    <div className="line-load">
-      {lines.map((line) => (
-        <div key={line.id}>
-          <div><strong>{line.name}</strong><span>{line.status} · OEE {line.oee}%</span></div>
-          <Progress value={line.load} tone={line.status === "待料" ? "amber" : "green"} />
-        </div>
-      ))}
+    <div className="section-title">
+      <Icon size={18} />
+      <h2>{title}</h2>
     </div>
   );
 }
 
-function Progress({ value, tone }: { value: number; tone: "green" | "blue" | "amber" | "red" }) {
-  return <div className={`progress ${tone}`} aria-label={`进度 ${value}%`}><i style={{ width: `${Math.min(value, 100)}%` }} /></div>;
+function Progress({ value }: { value: number }) {
+  return <span className="progress"><i style={{ width: `${Math.max(4, Math.min(100, value))}%` }} /></span>;
 }
 
-function StatusPill({ status }: { status: WorkOrder["status"] }) {
-  return <span className={`status-pill ${status}`}>{status}</span>;
+function StatusPill({ value }: { value: string }) {
+  const className = value === "正常" || value === "完成" || value === "已连接" ? "ok" : value === "风险" || value === "告警" ? "warn" : "risk";
+  return <span className={`status-pill ${className}`}>{value}</span>;
 }
+
+function filterOrders(orders: WorkOrder[], query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return orders;
+  return orders.filter((order) => [order.id, order.customer, order.sku, order.line, order.status].some((field) => field.toLowerCase().includes(keyword)));
+}
+
+function avg(values: number[]) {
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length));
+}
+
+function lowStock(materials: Material[]) {
+  return materials.filter((item) => item.stock < item.safeStock).length;
+}
+
+function openQuality(issues: QualityIssue[]) {
+  return issues.filter((issue) => issue.status !== "已关闭").length;
+}
+
+function onTime(snapshot: Snapshot) {
+  const risk = snapshot.orders.filter((order) => order.status === "风险" || order.status === "阻塞").length;
+  return Math.max(80, 98 - risk * 4 - lowStock(snapshot.materials) * 2);
+}
+
+function actionShape() {
+  return {
+    planPackage: (_id: string) => undefined,
+    convert: (_id: string) => undefined,
+    executeRecommendation: (_id: string) => undefined,
+    advanceOrder: (_id: string) => undefined,
+    closeQuality: (_id: string) => undefined,
+    replenish: (_id: string) => undefined,
+    completeMobile: (_id: string) => undefined,
+    verifyMasterData: (_id: string) => undefined,
+    syncIntegration: (_id: string) => undefined,
+    reset: () => undefined,
+    exception: () => undefined,
+  };
+}
+
+const _viewKeyGuard: ViewKey | null = null;
+void _viewKeyGuard;
 
 export default App;
