@@ -1,12 +1,16 @@
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  Bell,
   Boxes,
   BrainCircuit,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
+  Clock,
   Database,
   Factory,
   FileClock,
@@ -26,16 +30,22 @@ import {
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Target,
+  ThermometerSun,
   TimerReset,
   Truck,
+  TrendingUp,
   UserCog,
   Users,
   Wrench,
+  Zap,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CommercialPackage,
   Employee,
+  EquipmentAsset,
   EventItem,
   Integration,
   Material,
@@ -45,17 +55,25 @@ import {
   ViewKey,
   WorkOrder,
 } from "./data";
+import { Sparkline, DonutChart, BarChart, GaugeChart } from "./components/ui/Chart";
+import { Modal } from "./components/ui/Modal";
+import { Tabs } from "./components/ui/Tabs";
 
-type Surface = "home" | "command" | "fulfillment" | "shopfloor" | "quality" | "materials" | "implementation" | "platform" | "admin";
+/* ─── Types ─────────────────────────────────────────────────────── */
+
+type Surface = "home" | "command" | "fulfillment" | "shopfloor" | "quality" | "materials" | "equipment" | "implementation" | "platform" | "admin";
 type RoleKey = "coo" | "planner" | "production" | "quality" | "warehouse" | "it";
 
-const surfaces: { key: Surface; label: string; icon: typeof Factory }[] = [
+/* ─── Constants ─────────────────────────────────────────────────── */
+
+const surfaces: { key: Surface; label: string; icon: typeof Factory; badge?: string }[] = [
   { key: "home", label: "商业首页", icon: Factory },
   { key: "command", label: "经营总览", icon: Gauge },
   { key: "fulfillment", label: "订单履约", icon: Route },
   { key: "shopfloor", label: "移动现场", icon: Smartphone },
   { key: "quality", label: "质量追溯", icon: ClipboardCheck },
   { key: "materials", label: "物料供应", icon: Boxes },
+  { key: "equipment", label: "设备资源", icon: Wrench },
   { key: "implementation", label: "上线实施", icon: BadgeCheck },
   { key: "platform", label: "平台能力", icon: PlugZap },
   { key: "admin", label: "组织权限", icon: UserCog },
@@ -71,71 +89,36 @@ const roleFocus: Record<RoleKey, { name: string; mission: string; primary: Surfa
 };
 
 const mesModules = [
-  "生产统计",
-  "物料管理",
-  "工艺路线",
-  "设备管理",
-  "故障管理",
-  "质量管理",
-  "工位管理",
-  "产线管理",
-  "计划排程",
-  "BOM 管理",
-  "工序管理",
-  "模具管理",
-  "预警管理",
-  "二维码管理",
-  "车间管理",
+  "生产统计", "物料管理", "工艺路线", "设备管理", "故障管理",
+  "质量管理", "工位管理", "产线管理", "计划排程", "BOM 管理",
+  "工序管理", "模具管理", "预警管理", "二维码管理", "车间管理",
 ];
 
 const dashboardShots = [
-  {
-    title: "生产看板",
-    body: "车间生产状况实时把握",
-    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/1%E7%94%9F%E4%BA%A7%E7%9C%8B%E6%9D%BF.png",
-  },
-  {
-    title: "质量看板",
-    body: "批次、检验点、异常闭环统一追溯",
-    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/2%E8%B4%A8%E9%87%8F%E7%9C%8B%E6%9D%BF.png",
-  },
-  {
-    title: "物料看板",
-    body: "库存、齐套、发料和安全库存同步协同",
-    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/3%E7%89%A9%E6%96%99%E7%9C%8B%E6%9D%BF.png",
-  },
-  {
-    title: "设备看板",
-    body: "点检、保养、停机和产能影响即时可见",
-    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/4%E8%AE%BE%E5%A4%87%E7%9C%8B%E6%9D%BF.png",
-  },
-  {
-    title: "移动现场",
-    body: "手机端扫码报工、质检、收发料和异常上报",
-    url: "https://files.blacklake.cn/ow-images/zhuanti/180808/5%E6%94%AF%E6%8C%81%E6%89%8B%E6%9C%BAapp.png",
-  },
+  { title: "生产看板", body: "车间生产状况实时把握", url: "https://files.blacklake.cn/ow-images/zhuanti/180808/1%E7%94%9F%E4%BA%A7%E7%9C%8B%E6%9D%BF.png" },
+  { title: "质量看板", body: "批次、检验点、异常闭环统一追溯", url: "https://files.blacklake.cn/ow-images/zhuanti/180808/2%E8%B4%A8%E9%87%8F%E7%9C%8B%E6%9D%BF.png" },
+  { title: "物料看板", body: "库存、齐套、发料和安全库存同步协同", url: "https://files.blacklake.cn/ow-images/zhuanti/180808/3%E7%89%A9%E6%96%99%E7%9C%8B%E6%9D%BF.png" },
+  { title: "设备看板", body: "点检、保养、停机和产能影响即时可见", url: "https://files.blacklake.cn/ow-images/zhuanti/180808/4%E8%AE%BE%E5%A4%87%E7%9C%8B%E6%9D%BF.png" },
+  { title: "移动现场", body: "手机端扫码报工、质检、收发料和异常上报", url: "https://files.blacklake.cn/ow-images/zhuanti/180808/5%E6%94%AF%E6%8C%81%E6%89%8B%E6%9C%BAapp.png" },
 ];
 
 const scenarioSections = [
   {
-    id: "质量管理",
-    eyebrow: "Quality Traceability",
+    id: "质量管理", eyebrow: "Quality Traceability",
     title: "质量问题不是事后登记，而是卡在工序现场闭环",
     body: "把来料检、首检、巡检、终检和客诉追溯接到批次、工单、工序、设备与责任人。质量员可以在移动端发起偏差、隔离批次、要求返工，经营层能看到未闭环问题对交付的影响。",
     image: "https://files.blacklake.cn/ow-images/zhuanti/180808/2%E8%B4%A8%E9%87%8F%E7%9C%8B%E6%9D%BF.png",
     facts: ["检验点配置", "批次追溯", "偏差闭环", "客诉关联"],
   },
   {
-    id: "设备管理",
-    eyebrow: "Equipment Operations",
+    id: "设备管理", eyebrow: "Equipment Operations",
     title: "设备、模具、点检和停机原因进入同一张运行账",
     body: "设备工程师维护资产台账、保养计划、故障记录和停机影响；班组在报工时同步记录设备状态。系统把设备可用性和产线计划放在一起，让排产不再只看人和物料。",
     image: "https://files.blacklake.cn/ow-images/zhuanti/180808/4%E8%AE%BE%E5%A4%87%E7%9C%8B%E6%9D%BF.png",
     facts: ["资产台账", "点检保养", "停机影响", "OEE 分析"],
   },
   {
-    id: "物料管理",
-    eyebrow: "Material Collaboration",
+    id: "物料管理", eyebrow: "Material Collaboration",
     title: "围绕工单齐套管理物料，而不是只看仓库库存",
     body: "计划创建工单后，仓储按批次和库位发料，现场扫码领料、退料、补料，系统自动提示缺料风险和安全库存。物料动作与工单进度相互校验，减少等料和错料。",
     image: "https://files.blacklake.cn/ow-images/zhuanti/180808/3%E7%89%A9%E6%96%99%E7%9C%8B%E6%9D%BF.png",
@@ -161,12 +144,14 @@ const dataChainSteps = [
   { title: "审计归档", body: "每次配置、审批和业务动作保留可复盘记录。", icon: FileClock },
 ];
 
-const faqItems = [
+const faqItems: [string, string][] = [
   ["这类 MES 怎么售卖？", "以首厂试点为入口，按企业租户、启用模块、工厂/产线规模和实施服务打包。试点跑通后沉淀模板，再复制到多工厂和上下游协同网络。"],
   ["为什么要做角色导购？", "MES 的购买者和使用者不是同一人。经营层看 ROI，IT 看权限与接口，计划、生产、质量、仓储关心每日动作。导购页需要把这些入口直接连到工作台。"],
   ["和传统项目制软件的差异？", "云端产品强调配置、移动现场、快速上线和持续迭代；传统项目更多依赖长周期定制。这里的原型把配置、权限、流程和业务动作放在同一条链路里。"],
   ["后台管理必须包含什么？", "至少要有企业租户、组织员工、角色权限、工厂范围、主数据、接口状态和审计日志，否则官网注册之后无法进入一个可信的生产系统。"],
 ];
+
+/* ─── API Helper ────────────────────────────────────────────────── */
 
 async function request<T>(path: string, userId: string, options?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -176,6 +161,10 @@ async function request<T>(path: string, userId: string, options?: RequestInit): 
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   APP
+   ═══════════════════════════════════════════════════════════════════ */
 
 function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -187,6 +176,8 @@ function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [sideCollapsed, setSideCollapsed] = useState(false);
+  const [eventDrawer, setEventDrawer] = useState(false);
 
   async function refresh(nextUserId = userId) {
     const next = await request<Snapshot>("/api/snapshot", nextUserId);
@@ -221,7 +212,7 @@ function App() {
     try {
       const next = await request<Snapshot>(path, userId, { method: "POST", body: "{}" });
       setSnapshot(next);
-      toast("动作已写入事件流、业务对象和审计日志");
+      toast("操作已写入事件流与审计日志");
     } catch (err) {
       setError(err instanceof Error ? err.message : "操作失败");
     } finally {
@@ -232,7 +223,7 @@ function App() {
   function toast(message: string) {
     setNotice(message);
     setError(null);
-    window.setTimeout(() => setNotice(null), 2600);
+    window.setTimeout(() => setNotice(null), 3200);
   }
 
   function logout() {
@@ -264,6 +255,14 @@ function App() {
     completeMobile: (id: string) => mutate(`/api/mobile/${id}/complete`, id),
     verifyMasterData: (id: string) => mutate(`/api/master-data/${id}/verify`, id),
     syncIntegration: (id: string) => mutate(`/api/integrations/${id}/sync`, id),
+    publishRoute: (id: string) => mutate(`/api/routes/${id}/publish`, id),
+    publishKanban: (id: string) => mutate(`/api/kanban/${id}/publish`, id),
+    equipCheck: (id: string) => mutate(`/api/equipment/${id}/check`, id),
+    resolveInsight: (id: string) => mutate(`/api/insights/${id}/resolve`, id),
+    toggleRule: (id: string) => mutate(`/api/rules/${id}/toggle`, id),
+    applyTemplate: (id: string) => mutate(`/api/templates/${id}/apply`, id),
+    advanceWorkflow: (id: string) => mutate(`/api/workflows/${id}/advance`, id),
+    advanceImpl: (id: string) => mutate(`/api/implementation/${id}/advance`, id),
     reset: () => mutate("/api/admin/reset", "reset"),
     exception: () => mutate("/api/events/exception", "exception"),
   };
@@ -288,13 +287,13 @@ function App() {
   const activeRole = roleFocus[(snapshot.currentUser.roleKey as RoleKey) || "planner"] || roleFocus.planner;
 
   return (
-    <div className="product-shell">
+    <div className={`product-shell ${sideCollapsed ? "collapsed" : ""}`}>
       <aside className="rail">
         <button className="brand-lockup" type="button" onClick={() => setShowSite(true)} aria-label="工脉智造原型首页">
           <span className="brand-symbol">GM</span>
-          <span>
+          <span className="brand-text">
             <strong>工脉智造</strong>
-            <small>制造协同原型</small>
+            <small>制造协同平台</small>
           </span>
         </button>
         <nav className="rail-nav" aria-label="产品模块">
@@ -318,25 +317,31 @@ function App() {
           <strong>{snapshot.tenant.name}</strong>
           <span>{snapshot.tenant.plants} 工厂 / {snapshot.tenant.lines} 产线 / {snapshot.tenant.users} 用户</span>
         </div>
+        <button className="collapse-toggle" type="button" onClick={() => setSideCollapsed(!sideCollapsed)} aria-label="收起侧边栏">
+          <ChevronDown size={16} />
+        </button>
       </aside>
 
       <main className="workspace">
         <header className="topline">
-          <div>
-            <p className="eyebrow">Cloud MES / MOM / Supply Chain / Industrial AI</p>
+          <div className="topline-left">
             <h1>{surfaces.find((item) => item.key === surface)?.label}</h1>
-            <span>{snapshot.currentUser.name} · {activeRole.name} · {activeRole.mission}</span>
+            <span className="breadcrumb">{snapshot.currentUser.name} / {activeRole.name} / {activeRole.mission}</span>
           </div>
           <div className="top-actions">
             <label className="searchbox">
               <Search size={16} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索工单、物料、客户" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索工单、物料、客户..." />
             </label>
-            <select value={userId} onChange={(event) => login(event.target.value)} aria-label="切换角色">
+            <select value={userId} onChange={(event) => login(event.target.value)} aria-label="切换角色" className="role-select">
               {snapshot.users.map((user) => (
                 <option key={user.id} value={user.id}>{user.name} · {user.role}</option>
               ))}
             </select>
+            <button className="icon-button" type="button" onClick={() => setEventDrawer(true)} title="事件中心">
+              <Bell size={17} />
+              {snapshot.events.length > 0 && <i className="badge-dot" />}
+            </button>
             <button className="icon-button warn" type="button" onClick={actions.exception} disabled={busy === "exception"} title="触发现场异常">
               <AlertTriangle size={17} />
             </button>
@@ -349,22 +354,48 @@ function App() {
           </div>
         </header>
 
-        {notice && <div className="toast success">{notice}</div>}
-        {error && <div className="toast error">{error === "HTTP 401" ? "密码不正确，演示密码为 demo123" : error}</div>}
+        {notice && <div className="toast success"><CheckCircle2 size={16} />{notice}</div>}
+        {error && <div className="toast error"><AlertTriangle size={16} />{error === "HTTP 401" ? "密码不正确，演示密码为 demo123" : error}</div>}
 
-        {surface === "home" && <Home snapshot={snapshot} actions={actions} busy={busy} onNavigate={setSurface} />}
-        {surface === "command" && <CommandCenter snapshot={snapshot} actions={actions} busy={busy} onNavigate={setSurface} />}
-        {surface === "fulfillment" && <Fulfillment snapshot={snapshot} query={query} actions={actions} busy={busy} />}
-        {surface === "shopfloor" && <Shopfloor snapshot={snapshot} actions={actions} busy={busy} />}
-        {surface === "quality" && <Quality snapshot={snapshot} actions={actions} busy={busy} />}
-        {surface === "materials" && <Materials snapshot={snapshot} actions={actions} busy={busy} />}
-        {surface === "implementation" && <Implementation snapshot={snapshot} actions={actions} busy={busy} />}
-        {surface === "platform" && <Platform snapshot={snapshot} actions={actions} busy={busy} />}
-        {surface === "admin" && <AdminCenter snapshot={snapshot} />}
+        <div className="page-content">
+          {surface === "command" && <CommandCenter snapshot={snapshot} actions={actions} busy={busy} onNavigate={setSurface} />}
+          {surface === "fulfillment" && <Fulfillment snapshot={snapshot} query={query} actions={actions} busy={busy} />}
+          {surface === "shopfloor" && <Shopfloor snapshot={snapshot} actions={actions} busy={busy} />}
+          {surface === "quality" && <Quality snapshot={snapshot} actions={actions} busy={busy} />}
+          {surface === "materials" && <Materials snapshot={snapshot} actions={actions} busy={busy} />}
+          {surface === "equipment" && <Equipment snapshot={snapshot} actions={actions} busy={busy} />}
+          {surface === "implementation" && <Implementation snapshot={snapshot} actions={actions} busy={busy} />}
+          {surface === "platform" && <Platform snapshot={snapshot} actions={actions} busy={busy} />}
+          {surface === "admin" && <AdminCenter snapshot={snapshot} actions={actions} busy={busy} />}
+          {surface === "home" && <Home snapshot={snapshot} actions={actions} busy={busy} onNavigate={setSurface} />}
+        </div>
       </main>
+
+      {/* Event Drawer */}
+      <div className={`event-drawer ${eventDrawer ? "open" : ""}`}>
+        <header>
+          <h3><Bell size={16} /> 事件中心</h3>
+          <button type="button" className="icon-button" onClick={() => setEventDrawer(false)}><X size={16} /></button>
+        </header>
+        <ol className="event-feed">
+          {snapshot.events.slice(0, 20).map((event) => (
+            <li key={event.id} className={`event-item type-${event.type}`}>
+              <span className="event-time">{event.time}</span>
+              <span className="event-type">{event.type}</span>
+              <p>{event.message}</p>
+              {event.actor && <em>{event.actor}</em>}
+            </li>
+          ))}
+        </ol>
+      </div>
+      {eventDrawer && <div className="drawer-backdrop" onClick={() => setEventDrawer(false)} />}
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LANDING PAGE (MES Site)
+   ═══════════════════════════════════════════════════════════════════ */
 
 function MesLanding({
   snapshot,
@@ -397,9 +428,7 @@ function MesLanding({
           {["生产管理", "质量管理", "设备管理", "物料管理", "看板管理", "产品价值"].map((item) => <a key={item} href={`#${item}`}>{item}</a>)}
         </nav>
         <span className="mes-phone">400-921-0816</span>
-        <button className="mes-cta" type="button" onClick={onLogin} disabled={busy !== null}>
-          免费体验
-        </button>
+        <button className="mes-cta" type="button" onClick={onLogin} disabled={busy !== null}>免费体验</button>
       </header>
 
       <section className="mes-hero">
@@ -573,11 +602,7 @@ function MesLanding({
 
       <section className="mes-section mes-scenarios" aria-label="核心业务场景">
         {scenarioSections.map((scenario, index) => (
-          <article
-            className={index % 2 === 1 ? "scenario-row reversed" : "scenario-row"}
-            id={scenario.id}
-            key={scenario.id}
-          >
+          <article className={index % 2 === 1 ? "scenario-row reversed" : "scenario-row"} id={scenario.id} key={scenario.id}>
             <div className="scenario-copy">
               <p className="eyebrow">{scenario.eyebrow}</p>
               <h2>{scenario.title}</h2>
@@ -605,9 +630,7 @@ function MesLanding({
               <span>{template.industry}</span>
               <h3>{template.name}</h3>
               <p>{template.fit}</p>
-              <div>
-                {template.modules.slice(0, 4).map((item) => <b key={item}>{item}</b>)}
-              </div>
+              <div>{template.modules.slice(0, 4).map((item) => <b key={item}>{item}</b>)}</div>
               <em>{template.rollout}</em>
             </article>
           ))}
@@ -634,7 +657,7 @@ function MesLanding({
       <section className="mes-section mes-commercial">
         <div className="commercial-copy">
           <p className="eyebrow">Commercialization</p>
-          <h2>官网导购要能解释“怎么购买、怎么落地、怎么扩厂”</h2>
+          <h2>官网导购要能解释"怎么购买、怎么落地、怎么扩厂"</h2>
           <p>按云端工业 SaaS 的市场认知，客户买的不是一个孤立看板，而是一套从试点到规模化复制的制造协同能力。页面需要把套餐、实施、ROI 和后台权限讲清楚。</p>
         </div>
         <div className="commercial-grid">
@@ -682,9 +705,7 @@ function MesLanding({
           <p className="eyebrow">Admin & Permission</p>
           <h2>注册之后必须有可信的组织、权限和接口后台</h2>
           <p>用户在线提交只是开始。真实 MES 要能把企业租户、工厂范围、员工角色、接口状态和审计日志管起来，否则官网再漂亮也无法支撑生产系统上线。</p>
-          <button className="secondary-action" type="button" onClick={onEnterConsole}>
-            查看组织权限后台
-          </button>
+          <button className="secondary-action" type="button" onClick={onEnterConsole}>查看组织权限后台</button>
         </div>
         <div className="admin-preview-board" aria-label="后台管理预览">
           <article className="tenant-preview">
@@ -757,13 +778,10 @@ function MesLanding({
             })}
           </div>
           <button className="primary-action role-login" type="button" onClick={onLogin} disabled={busy !== null}>
-            登录并进入 {surfaces.find((item) => item.key === selectedFocus.primary)?.label || "生产系统"}
-            <ArrowRight size={17} />
+            登录并进入 {surfaces.find((item) => item.key === selectedFocus.primary)?.label || "生产系统"} <ArrowRight size={17} />
           </button>
           {localStorage.getItem("gongmai-session") === "active" && (
-            <button className="secondary-action role-console" type="button" onClick={onEnterConsole}>
-              进入当前登录工作台
-            </button>
+            <button className="secondary-action role-console" type="button" onClick={onEnterConsole}>进入当前登录工作台</button>
           )}
         </div>
       </section>
@@ -843,78 +861,160 @@ function MesLanding({
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   BOOT & HELPERS
+   ═══════════════════════════════════════════════════════════════════ */
+
 function Boot({ message }: { message: string }) {
   return (
     <main className="boot-screen">
       <span className="brand-symbol">GM</span>
-      <strong>工脉智造制造协同原型</strong>
+      <strong>工脉智造制造协同平台</strong>
       <p>{message}</p>
+      <div className="boot-spinner" />
     </main>
   );
 }
 
-function Login({
+/* ═══════════════════════════════════════════════════════════════════
+   COMMAND CENTER (enhanced with charts)
+   ═══════════════════════════════════════════════════════════════════ */
+
+function CommandCenter({
   snapshot,
-  selected,
+  actions,
   busy,
-  error,
-  onSelect,
-  onLogin,
+  onNavigate,
 }: {
   snapshot: Snapshot;
-  selected: string;
+  actions: any;
   busy: string | null;
-  error: string | null;
-  onSelect: (id: string) => void;
-  onLogin: (id: string, password?: string) => void;
+  onNavigate: (surface: Surface) => void;
 }) {
-  const [password, setPassword] = useState("demo123");
-  const active = snapshot.users.find((user) => user.id === selected) || snapshot.users[0];
+  const oeeData = snapshot.lines.map(l => ({ label: l.name, value: l.oee }));
+  const loadData = snapshot.lines.map(l => ({ label: l.name, value: l.load }));
+  const avgOee = Math.round(snapshot.lines.reduce((s, l) => s + l.oee, 0) / Math.max(1, snapshot.lines.length));
+  const qualityRate = Math.round(((snapshot.qualityIssues.filter(q => q.status === "已关闭").length) / Math.max(1, snapshot.qualityIssues.length)) * 100);
+  const progressTrend = snapshot.orders.map(o => o.progress);
 
   return (
-    <main className="login-view">
-      <section className="login-brief">
-        <span className="brand-symbol">GM</span>
-        <p className="eyebrow">云原生制造协同平台</p>
-        <h1>从订单到交付，让工厂在线协同</h1>
-        <p>沿用云端制造协同产品的商业逻辑：官网售卖、首厂试点、车间扫码、质量追溯、供应链透明和工业 AI 建议在同一套租户数据里闭环。</p>
-        <div className="proof-strip">
-          <span><TimerReset size={15} /> 6-12 周上线</span>
-          <span><ScanLine size={15} /> 移动端优先</span>
-          <span><BrainCircuit size={15} /> 工业智能体</span>
+    <div className="screen-stack">
+      {/* KPI Row with Charts */}
+      <section className="kpi-row">
+        <article className="kpi-card good">
+          <div className="kpi-header"><Target size={16} /><span>准交预测</span></div>
+          <strong>{onTime(snapshot)}%</strong>
+          <Sparkline data={[92, 94, 91, 95, onTime(snapshot)]} color="var(--mint)" />
+        </article>
+        <article className="kpi-card info">
+          <div className="kpi-header"><Activity size={16} /><span>平均 OEE</span></div>
+          <strong>{avgOee}%</strong>
+          <DonutChart value={avgOee} size={56} strokeWidth={6} color="var(--blue)" />
+        </article>
+        <article className="kpi-card warn">
+          <div className="kpi-header"><Boxes size={16} /><span>缺料风险</span></div>
+          <strong>{lowStock(snapshot.materials)} 项</strong>
+          <Sparkline data={[3, 2, 4, 3, lowStock(snapshot.materials)]} color="var(--amber)" />
+        </article>
+        <article className="kpi-card risk">
+          <div className="kpi-header"><ClipboardCheck size={16} /><span>质量闭环率</span></div>
+          <strong>{qualityRate}%</strong>
+          <DonutChart value={qualityRate} size={56} strokeWidth={6} color={qualityRate > 60 ? "var(--mint)" : "var(--red)"} />
+        </article>
+        <article className="kpi-card info">
+          <div className="kpi-header"><PlugZap size={16} /><span>接口健康</span></div>
+          <strong>{snapshot.integrations.filter(i => i.status === "已连接").length}/{snapshot.integrations.length}</strong>
+          <DonutChart value={snapshot.integrations.filter(i => i.status === "已连接").length} max={snapshot.integrations.length} size={56} strokeWidth={6} color="var(--blue)" />
+        </article>
+      </section>
+
+      {/* Charts Row */}
+      <section className="chart-row">
+        <div className="chart-panel">
+          <h3><BarChart3 size={16} /> 产线 OEE 对比</h3>
+          <BarChart data={oeeData} height={140} barColor="var(--mint)" />
+        </div>
+        <div className="chart-panel">
+          <h3><Gauge size={16} /> 产线负载</h3>
+          <BarChart data={loadData} height={140} barColor="var(--blue)" />
+        </div>
+        <div className="chart-panel">
+          <h3><TrendingUp size={16} /> 工单进度分布</h3>
+          <div className="progress-distribution">
+            {snapshot.orders.map(o => (
+              <div key={o.id} className="progress-item">
+                <span>{o.id}</span>
+                <Progress value={o.progress} />
+                <b>{o.progress}%</b>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
-      <section className="login-panel">
-        <div className="section-title">
-          <KeyRound size={18} />
-          <h2>员工账号登录</h2>
+
+      {/* AI Recommendations + Role Journey */}
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={BrainCircuit} title="AI 运营建议" />
+          <div className="recommendation-list">
+            {snapshot.recommendations.map((item) => (
+              <RecommendationCard key={item.id} item={item} busy={busy} onAccept={actions.executeRecommendation} />
+            ))}
+          </div>
         </div>
-        <label>
-          <span>企业租户</span>
-          <input value={`${snapshot.tenant.name} · ${snapshot.tenant.plan}`} readOnly />
-        </label>
-        <label>
-          <span>角色</span>
-          <select value={selected} onChange={(event) => onSelect(event.target.value)}>
-            {snapshot.users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>密码</span>
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </label>
-        <div className="identity-card">
-          <strong>{active.name}</strong>
-          <span>{active.department} · {active.plant}</span>
+        <div className="panel">
+          <SectionTitle icon={Sparkles} title="经营洞察" />
+          <div className="insight-list">
+            {snapshot.intelligenceInsights.slice(0, 4).map((insight) => (
+              <article key={insight.id} className={`insight-card severity-${insight.severity}`}>
+                <div className="insight-head">
+                  <span className="insight-domain">{insight.domain}</span>
+                  <span className={`severity-badge ${insight.severity}`}>{insight.severity}</span>
+                </div>
+                <strong>{insight.title}</strong>
+                <p>{insight.recommendation}</p>
+                <footer>
+                  <span>{insight.metric}: {insight.value}</span>
+                  <button className="small-action" type="button" onClick={() => actions.resolveInsight(insight.id)} disabled={busy === insight.id || insight.status === "已处理"}>
+                    {insight.status === "已处理" ? "已处理" : "处理"}
+                  </button>
+                </footer>
+              </article>
+            ))}
+          </div>
         </div>
-        {error && <div className="toast error">{error === "HTTP 401" ? "密码不正确，演示密码为 demo123" : error}</div>}
-        <button className="primary-action" type="button" onClick={() => onLogin(selected, password)} disabled={busy === selected}>
-          <KeyRound size={17} /> 登录工作台
-        </button>
       </section>
-    </main>
+
+      {/* Quick Navigation */}
+      <section className="panel">
+        <SectionTitle icon={Factory} title="角色工作台快捷入口" />
+        <div className="journey-grid">
+          {([
+            { role: "经营层", task: "看准交、库存、质量与产能红线", target: "command" as Surface, Icon: Gauge },
+            { role: "计划员", task: "处理阻塞工单并冻结今日计划", target: "fulfillment" as Surface, Icon: Route },
+            { role: "生产现场", task: "扫码报工并回写异常", target: "shopfloor" as Surface, Icon: Smartphone },
+            { role: "质量团队", task: "关闭偏差并归档追溯链", target: "quality" as Surface, Icon: ClipboardCheck },
+            { role: "仓储物料", task: "管理齐套发料和补货", target: "materials" as Surface, Icon: Boxes },
+            { role: "IT/实施", task: "校验主数据和接口健康", target: "implementation" as Surface, Icon: BadgeCheck },
+          ]).map(({ role, task, target, Icon }) => (
+            <button key={role} className="journey-card" type="button" onClick={() => onNavigate(target)}>
+              <Icon size={20} />
+              <strong>{role}</strong>
+              <span>{task}</span>
+              <ArrowRight size={14} />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <EventPanel events={snapshot.events} />
+    </div>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   HOME (Internal landing after login)
+   ═══════════════════════════════════════════════════════════════════ */
 
 function Home({
   snapshot,
@@ -923,7 +1023,7 @@ function Home({
   onNavigate,
 }: {
   snapshot: Snapshot;
-  actions: ReturnType<typeof actionShape>;
+  actions: any;
   busy: string | null;
   onNavigate: (surface: Surface) => void;
 }) {
@@ -991,103 +1091,119 @@ function Home({
   );
 }
 
-function CommandCenter({
-  snapshot,
-  actions,
-  busy,
-  onNavigate,
-}: {
-  snapshot: Snapshot;
-  actions: ReturnType<typeof actionShape>;
-  busy: string | null;
-  onNavigate: (surface: Surface) => void;
-}) {
-  return (
-    <div className="screen-stack">
-      <section className="metric-row">
-        <Metric label="准交预测" value={`${onTime(snapshot)}%`} tone="good" />
-        <Metric label="平均工单进度" value={`${avg(snapshot.orders.map((order) => order.progress))}%`} tone="info" />
-        <Metric label="缺料风险" value={`${lowStock(snapshot.materials)} 项`} tone="warn" />
-        <Metric label="质量待闭环" value={`${openQuality(snapshot.qualityIssues)} 单`} tone="risk" />
-        <Metric label="接口健康" value={`${snapshot.integrations.filter((item) => item.status === "已连接").length}/${snapshot.integrations.length}`} tone="info" />
-      </section>
-      <section className="split">
-        <div className="panel">
-          <SectionTitle icon={BrainCircuit} title="AI 运营建议" />
-          <div className="recommendation-list">
-            {snapshot.recommendations.map((item) => (
-              <RecommendationCard key={item.id} item={item} busy={busy} onAccept={actions.executeRecommendation} />
-            ))}
-          </div>
-        </div>
-        <div className="panel">
-          <SectionTitle icon={Factory} title="角色下一步" />
-          <div className="journey-list">
-            {[
-              ["经营层", "看准交、库存、质量与产能红线", "command"],
-              ["计划员", "处理阻塞工单并冻结今日计划", "fulfillment"],
-              ["现场", "扫码报工并回写异常", "shopfloor"],
-              ["质量", "关闭偏差并归档追溯链", "quality"],
-              ["IT/实施", "校验主数据和接口健康", "implementation"],
-            ].map(([role, task, target]) => (
-              <button key={role} className="journey-item" type="button" onClick={() => onNavigate(target as Surface)}>
-                <strong>{role}</strong>
-                <span>{task}</span>
-                <ArrowRight size={16} />
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-      <EventPanel events={snapshot.events} />
-    </div>
-  );
-}
+/* ═══════════════════════════════════════════════════════════════════
+   FULFILLMENT (enhanced with line load chart)
+   ═══════════════════════════════════════════════════════════════════ */
 
-function Fulfillment({ snapshot, query, actions, busy }: { snapshot: Snapshot; query: string; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+function Fulfillment({ snapshot, query, actions, busy }: { snapshot: Snapshot; query: string; actions: any; busy: string | null }) {
   const orders = filterOrders(snapshot.orders, query);
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
+  const detail = selectedOrder ? snapshot.orders.find(o => o.id === selectedOrder) : null;
+
   return (
     <div className="screen-stack">
+      {/* Order Summary Strip */}
+      <section className="kpi-row compact">
+        <article className="kpi-card info">
+          <div className="kpi-header"><PackageCheck size={14} /><span>总工单</span></div>
+          <strong>{snapshot.orders.length}</strong>
+        </article>
+        <article className="kpi-card good">
+          <div className="kpi-header"><CheckCircle2 size={14} /><span>正常</span></div>
+          <strong>{snapshot.orders.filter(o => o.status === "正常").length}</strong>
+        </article>
+        <article className="kpi-card warn">
+          <div className="kpi-header"><AlertTriangle size={14} /><span>风险</span></div>
+          <strong>{snapshot.orders.filter(o => o.status === "风险").length}</strong>
+        </article>
+        <article className="kpi-card risk">
+          <div className="kpi-header"><X size={14} /><span>阻塞</span></div>
+          <strong>{snapshot.orders.filter(o => o.status === "阻塞").length}</strong>
+        </article>
+      </section>
+
       <section className="split wide-left">
         <div className="panel">
           <SectionTitle icon={Route} title="订单履约池" />
           <div className="table-list">
             {orders.map((order) => (
-              <article className="work-card" key={order.id}>
-                <div>
+              <article className={`work-card ${selectedOrder === order.id ? "selected" : ""}`} key={order.id} onClick={() => setSelectedOrder(order.id)}>
+                <div className="work-card-info">
                   <strong>{order.id} · {order.sku}</strong>
                   <span>{order.customer} / {order.line} / 交期 {order.due}</span>
+                  {order.blockers.length > 0 && (
+                    <div className="blocker-tags">
+                      {order.blockers.map(b => <span key={b} className="blocker-tag">{b}</span>)}
+                    </div>
+                  )}
                 </div>
                 <Progress value={order.progress} />
                 <StatusPill value={order.status} />
-                <button className="small-action" type="button" onClick={() => actions.advanceOrder(order.id)} disabled={busy === order.id}>
-                  <Play size={15} /> 报工推进
+                <button className="small-action" type="button" onClick={(e) => { e.stopPropagation(); actions.advanceOrder(order.id); }} disabled={busy === order.id}>
+                  <Play size={15} /> 报工
                 </button>
               </article>
             ))}
           </div>
         </div>
         <div className="panel">
-          <SectionTitle icon={BarChart3} title="产线负载" />
+          <SectionTitle icon={BarChart3} title="产线负载与 OEE" />
           <div className="line-stack">
             {snapshot.lines.map((line) => (
               <div className="line-row" key={line.id}>
-                <span>{line.name}</span>
-                <Progress value={line.load} />
-                <b>{line.status}</b>
+                <div className="line-info">
+                  <span className="line-name">{line.name}</span>
+                  <StatusPill value={line.status === "运行" ? "正常" : "风险"} />
+                </div>
+                <div className="line-metrics">
+                  <span>负载</span>
+                  <Progress value={line.load} />
+                  <b>{line.load}%</b>
+                </div>
+                <div className="line-metrics">
+                  <span>OEE</span>
+                  <Progress value={line.oee} />
+                  <b>{line.oee}%</b>
+                </div>
               </div>
             ))}
           </div>
+          {detail && (
+            <div className="order-detail-card">
+              <h4>工单详情: {detail.id}</h4>
+              <div className="detail-grid">
+                <span>客户</span><strong>{detail.customer}</strong>
+                <span>SKU</span><strong>{detail.sku}</strong>
+                <span>产线</span><strong>{detail.line}</strong>
+                <span>交期</span><strong>{detail.due}</strong>
+                <span>优先级</span><strong>{detail.priority}</strong>
+                <span>进度</span><strong>{detail.progress}%</strong>
+              </div>
+            </div>
+          )}
         </div>
       </section>
+
       <section className="panel">
         <SectionTitle icon={Layers3} title="工艺路线与质检点" />
         <div className="route-grid">
           {snapshot.processRoutes.map((route) => (
             <article className="route-card" key={route.id}>
-              <strong>{route.product} · {route.version}</strong>
-              <span>{route.line} / {route.cycleTime} / {route.status}</span>
-              <div>{route.steps.map((step) => <em key={step.sequence}>{step.name}</em>)}</div>
+              <div className="route-header">
+                <strong>{route.product} · {route.version}</strong>
+                <StatusPill value={route.status === "已发布" ? "正常" : "风险"} />
+              </div>
+              <span>{route.line} / {route.cycleTime} / QR: {route.qrCode}</span>
+              <div className="route-steps">
+                {route.steps.map((step) => (
+                  <span key={step.sequence} className={`route-step ${step.status === "已发布" ? "done" : ""}`}>
+                    {step.sequence}. {step.name}
+                  </span>
+                ))}
+              </div>
+              <button className="small-action" type="button" onClick={() => actions.publishRoute(route.id)} disabled={busy === route.id || route.status === "已发布"}>
+                {route.status === "已发布" ? "已发布" : "发布"}
+              </button>
             </article>
           ))}
         </div>
@@ -1096,109 +1212,331 @@ function Fulfillment({ snapshot, query, actions, busy }: { snapshot: Snapshot; q
   );
 }
 
-function Shopfloor({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
-  return (
-    <section className="split">
-      <div className="panel phone-panel">
-        <SectionTitle icon={Smartphone} title="移动扫码任务" />
-        {snapshot.mobileTasks.map((task) => (
-          <article className="mobile-task" key={task.id}>
-            <ScanLine size={22} />
-            <div>
-              <strong>{task.title}</strong>
-              <span>{task.target} / {task.scanCode}</span>
-              <p>{task.instruction}</p>
-            </div>
-            <button className="small-action" type="button" onClick={() => actions.completeMobile(task.id)} disabled={busy === task.id || task.status === "已完成"}>
-              <CheckCircle2 size={15} /> {task.status}
-            </button>
-          </article>
-        ))}
-      </div>
-      <div className="panel">
-        <SectionTitle icon={Gauge} title="现场大屏" />
-        <div className="kanban-grid">
-          {snapshot.kanbanBoards.map((board) => (
-            <article key={board.id}>
-              <strong>{board.name}</strong>
-              <span>{board.audience} / {board.scope}</span>
-              <p>{board.widgets.join(" · ")}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+/* ═══════════════════════════════════════════════════════════════════
+   SHOPFLOOR
+   ═══════════════════════════════════════════════════════════════════ */
 
-function Quality({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+function Shopfloor({ snapshot, actions, busy }: { snapshot: Snapshot; actions: any; busy: string | null }) {
   return (
-    <section className="split">
-      <div className="panel">
-        <SectionTitle icon={ClipboardCheck} title="质量偏差闭环" />
-        <div className="table-list">
-          {snapshot.qualityIssues.map((issue) => (
-            <IssueCard key={issue.id} item={issue} busy={busy} onClose={actions.closeQuality} />
-          ))}
-        </div>
-      </div>
-      <div className="panel">
-        <SectionTitle icon={ShieldCheck} title="追溯链" />
-        <div className="trace-chain">
-          {["来料批次", "工序扫码", "首件确认", "巡检记录", "成品放行", "客户追溯"].map((step, index) => (
-            <span key={step}><b>{index + 1}</b>{step}</span>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+    <div className="screen-stack">
+      <section className="kpi-row compact">
+        <article className="kpi-card info">
+          <div className="kpi-header"><Smartphone size={14} /><span>总任务</span></div>
+          <strong>{snapshot.mobileTasks.length}</strong>
+        </article>
+        <article className="kpi-card good">
+          <div className="kpi-header"><CheckCircle2 size={14} /><span>已完成</span></div>
+          <strong>{snapshot.mobileTasks.filter(t => t.status === "已完成").length}</strong>
+        </article>
+        <article className="kpi-card warn">
+          <div className="kpi-header"><Clock size={14} /><span>待执行</span></div>
+          <strong>{snapshot.mobileTasks.filter(t => t.status === "待执行").length}</strong>
+        </article>
+      </section>
 
-function Materials({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
-  return (
-    <section className="split">
-      <div className="panel">
-        <SectionTitle icon={Boxes} title="物料与齐套" />
-        <div className="table-list">
-          {snapshot.materials.map((item) => (
-            <MaterialCard key={item.id} item={item} busy={busy} onReplenish={actions.replenish} />
-          ))}
-        </div>
-      </div>
-      <div className="panel">
-        <SectionTitle icon={Truck} title="供应协同" />
-        <div className="supply-cards">
-          {snapshot.salesOpportunities.map((item) => (
-            <article key={item.id}>
-              <strong>{item.customer}</strong>
-              <span>{item.stage}</span>
-              <p>{item.nextStep}</p>
-              <button className="small-action" type="button" onClick={() => actions.convert(item.id)} disabled={busy === item.id || item.status === "已转实施"}>
-                转入实施
+      <section className="split">
+        <div className="panel phone-panel">
+          <SectionTitle icon={Smartphone} title="移动扫码任务" />
+          {snapshot.mobileTasks.map((task) => (
+            <article className={`mobile-task ${task.status === "已完成" ? "completed" : ""}`} key={task.id}>
+              <div className="mobile-task-icon">
+                <ScanLine size={22} />
+                <span className={`task-type type-${task.type}`}>{task.type}</span>
+              </div>
+              <div className="mobile-task-content">
+                <strong>{task.title}</strong>
+                <span>{task.target} / {task.scanCode}</span>
+                <p>{task.instruction}</p>
+              </div>
+              <button className="small-action" type="button" onClick={() => actions.completeMobile(task.id)} disabled={busy === task.id || task.status === "已完成"}>
+                <CheckCircle2 size={15} /> {task.status}
               </button>
             </article>
           ))}
         </div>
-      </div>
-    </section>
+        <div className="panel">
+          <SectionTitle icon={Gauge} title="现场看板" />
+          <div className="kanban-grid">
+            {snapshot.kanbanBoards.map((board) => (
+              <article key={board.id} className={`kanban-card ${board.status === "已发布" ? "published" : ""}`}>
+                <div className="kanban-header">
+                  <strong>{board.name}</strong>
+                  <StatusPill value={board.status === "已发布" ? "正常" : "风险"} />
+                </div>
+                <span>{board.audience} / {board.scope}</span>
+                <p>{board.widgets.join(" · ")}</p>
+                <footer>
+                  <em>刷新: {board.refreshRate}</em>
+                  <button className="small-action" type="button" onClick={() => actions.publishKanban(board.id)} disabled={busy === board.id || board.status === "已发布"}>
+                    {board.status === "已发布" ? "已发布" : "发布"}
+                  </button>
+                </footer>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
-function Implementation({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+/* ═══════════════════════════════════════════════════════════════════
+   QUALITY (enhanced with trace visualization)
+   ═══════════════════════════════════════════════════════════════════ */
+
+function Quality({ snapshot, actions, busy }: { snapshot: Snapshot; actions: any; busy: string | null }) {
+  const closedCount = snapshot.qualityIssues.filter(q => q.status === "已关闭").length;
+  const total = snapshot.qualityIssues.length;
+  const closureRate = total > 0 ? Math.round((closedCount / total) * 100) : 0;
+
   return (
     <div className="screen-stack">
+      <section className="kpi-row compact">
+        <article className="kpi-card info">
+          <div className="kpi-header"><ClipboardCheck size={14} /><span>总问题</span></div>
+          <strong>{total}</strong>
+        </article>
+        <article className="kpi-card good">
+          <div className="kpi-header"><CheckCircle2 size={14} /><span>已关闭</span></div>
+          <strong>{closedCount}</strong>
+        </article>
+        <article className="kpi-card risk">
+          <div className="kpi-header"><AlertTriangle size={14} /><span>待处理</span></div>
+          <strong>{total - closedCount}</strong>
+        </article>
+        <article className="kpi-card info">
+          <div className="kpi-header"><Target size={14} /><span>闭环率</span></div>
+          <strong>{closureRate}%</strong>
+          <DonutChart value={closureRate} size={44} strokeWidth={5} color={closureRate > 60 ? "var(--mint)" : "var(--red)"} />
+        </article>
+      </section>
+
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={ClipboardCheck} title="质量偏差闭环" />
+          <div className="table-list">
+            {snapshot.qualityIssues.map((issue) => (
+              <IssueCard key={issue.id} item={issue} busy={busy} onClose={actions.closeQuality} />
+            ))}
+          </div>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={ShieldCheck} title="批次追溯链" />
+          <div className="trace-chain-visual">
+            {["来料批次", "来料检验", "工序扫码", "首件确认", "巡检记录", "终检放行", "成品入库", "客户追溯"].map((step, index) => (
+              <div key={step} className="trace-node">
+                <span className="trace-dot">{index + 1}</span>
+                <strong>{step}</strong>
+                <div className="trace-line" />
+              </div>
+            ))}
+          </div>
+          <div className="quality-by-severity">
+            <h4>按严重程度分布</h4>
+            <BarChart
+              data={[
+                { label: "高", value: snapshot.qualityIssues.filter(q => q.severity === "高").length },
+                { label: "中", value: snapshot.qualityIssues.filter(q => q.severity === "中").length },
+                { label: "低", value: snapshot.qualityIssues.filter(q => q.severity === "低").length },
+              ]}
+              height={100}
+              barColor="var(--red)"
+            />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MATERIALS (enhanced with stock visualization)
+   ═══════════════════════════════════════════════════════════════════ */
+
+function Materials({ snapshot, actions, busy }: { snapshot: Snapshot; actions: any; busy: string | null }) {
+  return (
+    <div className="screen-stack">
+      <section className="kpi-row compact">
+        <article className="kpi-card info">
+          <div className="kpi-header"><Boxes size={14} /><span>物料种类</span></div>
+          <strong>{snapshot.materials.length}</strong>
+        </article>
+        <article className="kpi-card warn">
+          <div className="kpi-header"><AlertTriangle size={14} /><span>低库存</span></div>
+          <strong>{lowStock(snapshot.materials)}</strong>
+        </article>
+        <article className="kpi-card good">
+          <div className="kpi-header"><CheckCircle2 size={14} /><span>安全</span></div>
+          <strong>{snapshot.materials.length - lowStock(snapshot.materials)}</strong>
+        </article>
+      </section>
+
+      <section className="split">
+        <div className="panel">
+          <SectionTitle icon={Boxes} title="物料库存与齐套" />
+          <div className="table-list">
+            {snapshot.materials.map((item) => (
+              <MaterialCard key={item.id} item={item} busy={busy} onReplenish={actions.replenish} />
+            ))}
+          </div>
+        </div>
+        <div className="panel">
+          <SectionTitle icon={BarChart3} title="库存 vs 安全库存" />
+          <div className="stock-chart">
+            {snapshot.materials.map(m => (
+              <div key={m.id} className="stock-row">
+                <span className="stock-name">{m.name}</span>
+                <div className="stock-bars">
+                  <div className="stock-bar current" style={{ width: `${Math.min(100, (m.stock / (m.safeStock * 2)) * 100)}%` }}>
+                    <span>{m.stock}</span>
+                  </div>
+                  <div className="stock-bar safe" style={{ left: `${(m.safeStock / (m.safeStock * 2)) * 100}%` }} />
+                </div>
+                <span className={`stock-status ${m.stock < m.safeStock ? "risk" : "ok"}`}>
+                  {m.stock < m.safeStock ? "缺料" : "充足"}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="supply-section">
+            <SectionTitle icon={Truck} title="供应商机" />
+            <div className="supply-cards">
+              {snapshot.salesOpportunities.map((item) => (
+                <article key={item.id} className="supply-card">
+                  <strong>{item.customer}</strong>
+                  <StatusPill value={item.status === "已转实施" ? "正常" : "风险"} />
+                  <p>{item.nextStep}</p>
+                  <button className="small-action" type="button" onClick={() => actions.convert(item.id)} disabled={busy === item.id || item.status === "已转实施"}>
+                    {item.status === "已转实施" ? "已转实施" : "转入实施"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EQUIPMENT (NEW - dedicated page with gauges and sensors)
+   ═══════════════════════════════════════════════════════════════════ */
+
+function Equipment({ snapshot, actions, busy }: { snapshot: Snapshot; actions: any; busy: string | null }) {
+  const avgHealth = Math.round(snapshot.equipmentAssets.reduce((s, e) => s + e.health, 0) / Math.max(1, snapshot.equipmentAssets.length));
+  const avgOee = Math.round(snapshot.equipmentAssets.reduce((s, e) => s + e.oee, 0) / Math.max(1, snapshot.equipmentAssets.length));
+
+  return (
+    <div className="screen-stack">
+      <section className="kpi-row compact">
+        <article className="kpi-card info">
+          <div className="kpi-header"><Wrench size={14} /><span>设备台账</span></div>
+          <strong>{snapshot.equipmentAssets.length} 台</strong>
+        </article>
+        <article className="kpi-card good">
+          <div className="kpi-header"><Activity size={14} /><span>平均健康</span></div>
+          <strong>{avgHealth}%</strong>
+        </article>
+        <article className="kpi-card info">
+          <div className="kpi-header"><Gauge size={14} /><span>平均 OEE</span></div>
+          <strong>{avgOee}%</strong>
+        </article>
+        <article className="kpi-card warn">
+          <div className="kpi-header"><AlertTriangle size={14} /><span>需关注</span></div>
+          <strong>{snapshot.equipmentAssets.filter(e => e.health < 80).length} 台</strong>
+        </article>
+      </section>
+
+      <section className="equipment-grid">
+        {snapshot.equipmentAssets.map((asset) => (
+          <article key={asset.id} className={`equipment-card status-${asset.status}`}>
+            <div className="equip-header">
+              <strong>{asset.name}</strong>
+              <StatusPill value={asset.status === "运行" ? "正常" : asset.status === "告警" ? "风险" : "阻塞"} />
+            </div>
+            <span className="equip-location">{asset.plant} / {asset.line}</span>
+
+            <div className="equip-gauges">
+              <div className="gauge-item">
+                <GaugeChart value={asset.health} size={80} color={asset.health > 80 ? "var(--mint)" : asset.health > 60 ? "var(--amber)" : "var(--red)"} label="健康" />
+              </div>
+              <div className="gauge-item">
+                <GaugeChart value={asset.oee} size={80} color="var(--blue)" label="OEE" />
+              </div>
+            </div>
+
+            <div className="equip-sensors">
+              <div className="sensor-item">
+                <ThermometerSun size={14} />
+                <span>温度</span>
+                <strong className={asset.temperature > 70 ? "hot" : ""}>{asset.temperature}°C</strong>
+              </div>
+              <div className="sensor-item">
+                <Activity size={14} />
+                <span>振动</span>
+                <strong className={asset.vibration > 3 ? "hot" : ""}>{asset.vibration} mm/s</strong>
+              </div>
+            </div>
+
+            <div className="equip-footer">
+              <em>下次保养: {asset.nextMaintenance}</em>
+              <button className="small-action" type="button" onClick={() => actions.equipCheck(asset.id)} disabled={busy === asset.id}>
+                <Wrench size={14} /> 点检
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   IMPLEMENTATION
+   ═══════════════════════════════════════════════════════════════════ */
+
+function Implementation({ snapshot, actions, busy }: { snapshot: Snapshot; actions: any; busy: string | null }) {
+  const completedPhases = snapshot.implementationPhases.filter(p => p.status === "已完成").length;
+  const totalPhases = snapshot.implementationPhases.length;
+
+  return (
+    <div className="screen-stack">
+      <section className="kpi-row compact">
+        <article className="kpi-card info">
+          <div className="kpi-header"><BadgeCheck size={14} /><span>总阶段</span></div>
+          <strong>{totalPhases}</strong>
+        </article>
+        <article className="kpi-card good">
+          <div className="kpi-header"><CheckCircle2 size={14} /><span>已完成</span></div>
+          <strong>{completedPhases}</strong>
+        </article>
+        <article className="kpi-card info">
+          <div className="kpi-header"><Target size={14} /><span>进度</span></div>
+          <strong>{Math.round((completedPhases / totalPhases) * 100)}%</strong>
+          <DonutChart value={completedPhases} max={totalPhases} size={44} strokeWidth={5} />
+        </article>
+      </section>
+
       <section className="panel">
-        <SectionTitle icon={BadgeCheck} title="7 步上线路径" />
-        <div className="phase-track">
-          {snapshot.implementationPhases.map((phase) => (
-            <article key={phase.id} className={phase.status === "进行中" ? "current" : ""}>
-              <strong>{phase.name}</strong>
-              <span>{phase.owner} / {phase.time}</span>
-              <p>{phase.detail}</p>
+        <SectionTitle icon={BadgeCheck} title="上线实施路径" />
+        <div className="phase-track-enhanced">
+          {snapshot.implementationPhases.map((phase, idx) => (
+            <article key={phase.id} className={`phase-card ${phase.status === "进行中" ? "current" : phase.status === "已完成" ? "done" : ""}`}>
+              <span className="phase-number">{idx + 1}</span>
+              <div className="phase-content">
+                <strong>{phase.name}</strong>
+                <span>{phase.owner} / {phase.time}</span>
+                <p>{phase.detail}</p>
+              </div>
+              <button className="small-action" type="button" onClick={() => actions.advanceImpl(phase.id)} disabled={busy === phase.id || phase.status === "已完成"}>
+                {phase.status === "已完成" ? "已完成" : phase.status === "进行中" ? "推进" : "开始"}
+              </button>
             </article>
           ))}
         </div>
       </section>
+
       <section className="split">
         <div className="panel">
           <SectionTitle icon={Database} title="主数据准备度" />
@@ -1211,20 +1549,21 @@ function Implementation({ snapshot, actions, busy }: { snapshot: Snapshot; actio
                 </div>
                 <Progress value={item.readiness} />
                 <button className="small-action" type="button" onClick={() => actions.verifyMasterData(item.id)} disabled={busy === item.id || item.status === "已校验"}>
-                  校验
+                  {item.status === "已校验" ? "已校验" : "校验"}
                 </button>
               </article>
             ))}
           </div>
         </div>
         <div className="panel">
-          <SectionTitle icon={Users} title="角色启用" />
+          <SectionTitle icon={Users} title="角色启用任务" />
           <div className="activation-list">
             {snapshot.activationTasks.map((task) => (
-              <article key={task.id}>
+              <article key={task.id} className={`activation-card ${task.status === "已完成" ? "done" : ""}`}>
                 <strong>{task.role}</strong>
                 <span>{task.workspace}</span>
                 <p>{task.firstAction}</p>
+                <em>{task.successMetric}</em>
               </article>
             ))}
           </div>
@@ -1234,42 +1573,131 @@ function Implementation({ snapshot, actions, busy }: { snapshot: Snapshot; actio
   );
 }
 
-function Platform({ snapshot, actions, busy }: { snapshot: Snapshot; actions: ReturnType<typeof actionShape>; busy: string | null }) {
+/* ═══════════════════════════════════════════════════════════════════
+   PLATFORM
+   ═══════════════════════════════════════════════════════════════════ */
+
+function Platform({ snapshot, actions, busy }: { snapshot: Snapshot; actions: any; busy: string | null }) {
   return (
     <div className="screen-stack">
       <section className="platform-grid">
-        {[
-          ["云原生架构", "容器化、弹性扩容、持续迭代", Database],
-          ["低代码配置", "字段、流程、报表、权限和行业模板", Settings2],
-          ["开放接口", "ERP、PLM、WMS、IoT 和身份系统", PlugZap],
-          ["工业智能体", "排程、ChatBI、异常归因和质量预测", BrainCircuit],
-        ].map(([title, body, Icon]) => (
-          <article className="capability-card" key={title as string}>
+        {([
+          { title: "云原生架构", body: "容器化、弹性扩容、持续迭代", Icon: Database },
+          { title: "低代码配置", body: "字段、流程、报表、权限和行业模板", Icon: Settings2 },
+          { title: "开放接口", body: "ERP、PLM、WMS、IoT 和身份系统", Icon: PlugZap },
+          { title: "工业智能体", body: "排程、ChatBI、异常归因和质量预测", Icon: BrainCircuit },
+        ]).map(({ title, body, Icon }) => (
+          <article className="capability-card" key={title}>
             <Icon size={22} />
             <strong>{title}</strong>
             <span>{body}</span>
           </article>
         ))}
       </section>
+
+      <Tabs tabs={[
+        {
+          key: "integrations", label: "集成健康",
+          content: (
+            <div className="panel">
+              <div className="table-list">
+                {snapshot.integrations.map((item) => <IntegrationCard key={item.id} item={item} busy={busy} onSync={actions.syncIntegration} />)}
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: "rules", label: "规则配置",
+          content: (
+            <div className="panel">
+              <div className="rules-list">
+                {snapshot.rules.map((rule) => (
+                  <article key={rule.id} className={`rule-card ${rule.enabled ? "enabled" : "disabled"}`}>
+                    <div className="rule-info">
+                      <strong>{rule.name}</strong>
+                      <span>{rule.module} / 阈值: {rule.threshold}</span>
+                    </div>
+                    <button className={`toggle-btn ${rule.enabled ? "on" : "off"}`} type="button" onClick={() => actions.toggleRule(rule.id)} disabled={busy === rule.id}>
+                      {rule.enabled ? "已启用" : "已停用"}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: "workflows", label: "流程引擎",
+          content: (
+            <div className="panel">
+              <div className="workflow-list">
+                {snapshot.workflowInstances.map((wf) => (
+                  <article key={wf.id} className={`workflow-card status-${wf.status}`}>
+                    <div className="wf-header">
+                      <strong>{wf.name}</strong>
+                      <StatusPill value={wf.status === "已完成" ? "正常" : wf.status === "进行中" ? "风险" : "阻塞"} />
+                    </div>
+                    <span>{wf.category} / {wf.owner} / SLA: {wf.sla}</span>
+                    <div className="wf-steps">
+                      {wf.steps.map((step, idx) => (
+                        <span key={step} className={idx <= wf.currentStep ? "done" : ""}>{step}</span>
+                      ))}
+                    </div>
+                    <button className="small-action" type="button" onClick={() => actions.advanceWorkflow(wf.id)} disabled={busy === wf.id || wf.status === "已完成"}>
+                      {wf.status === "已完成" ? "已完成" : "推进"}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: "templates", label: "行业模板",
+          content: (
+            <div className="panel">
+              <div className="template-list">
+                {snapshot.industryTemplates.map((t) => (
+                  <article key={t.id} className={`template-card ${t.status === "已启用" ? "active" : ""}`}>
+                    <div className="tmpl-header">
+                      <span className="tmpl-industry">{t.industry}</span>
+                      <StatusPill value={t.status === "已启用" ? "正常" : "风险"} />
+                    </div>
+                    <strong>{t.name}</strong>
+                    <p>{t.fit}</p>
+                    <div className="tmpl-modules">{t.modules.slice(0, 5).map(m => <span key={m}>{m}</span>)}</div>
+                    <button className="small-action" type="button" onClick={() => actions.applyTemplate(t.id)} disabled={busy === t.id || t.status === "已启用"}>
+                      {t.status === "已启用" ? "已启用" : "启用"}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ),
+        },
+      ]} />
+
       <section className="split">
         <div className="panel">
-          <SectionTitle icon={PlugZap} title="集成健康" />
-          <div className="table-list">
-            {snapshot.integrations.map((item) => <IntegrationCard key={item.id} item={item} busy={busy} onSync={actions.syncIntegration} />)}
+          <SectionTitle icon={FileClock} title="审计日志" />
+          <div className="audit-list enhanced">
+            {snapshot.auditLogs.slice(0, 8).map((log) => (
+              <div key={log.id} className="audit-row">
+                <span className="audit-time">{log.createdAt}</span>
+                <strong className="audit-actor">{log.actor}</strong>
+                <span className="audit-action">{log.action}</span>
+                <code className="audit-entity">{log.entity}</code>
+              </div>
+            ))}
           </div>
         </div>
         <div className="panel">
-          <SectionTitle icon={FileClock} title="审计与数据库" />
+          <SectionTitle icon={Database} title="系统数据库" />
           <div className="db-grid">
-            <Metric label="数据库" value={snapshot.databaseAdmin.status} tone="good" />
+            <Metric label="状态" value={snapshot.databaseAdmin.status} tone="good" />
             <Metric label="表数量" value={`${snapshot.databaseAdmin.tableCount}`} tone="info" />
             <Metric label="记录数" value={`${snapshot.databaseAdmin.totalRows}`} tone="info" />
             <Metric label="备份数" value={`${snapshot.databaseAdmin.backups.length}`} tone="info" />
-          </div>
-          <div className="audit-list">
-            {snapshot.auditLogs.slice(0, 6).map((log) => (
-              <span key={log.id}>{log.actor} / {log.action} / {log.entity}</span>
-            ))}
           </div>
         </div>
       </section>
@@ -1277,23 +1705,17 @@ function Platform({ snapshot, actions, busy }: { snapshot: Snapshot; actions: Re
   );
 }
 
-function AdminCenter({ snapshot }: { snapshot: Snapshot }) {
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN CENTER
+   ═══════════════════════════════════════════════════════════════════ */
+
+function AdminCenter({ snapshot, actions, busy }: { snapshot: Snapshot; actions: any; busy: string | null }) {
   const permissionLabels: Record<string, string> = {
-    "orders:write": "工单推进",
-    "schedule:write": "排程调整",
-    "quality:write": "质量处理",
-    "inventory:write": "库存操作",
-    "config:read": "配置查看",
-    "config:write": "配置维护",
-    "dashboard:read": "经营看板",
-    "approval:write": "审批放行",
-    "audit:read": "审计查看",
-    "execution:write": "现场报工",
-    "mobile:write": "移动任务",
-    "routes:read": "工艺查看",
-    "workflow:write": "流程处理",
-    "integrations:read": "接口查看",
-    "integrations:write": "接口维护",
+    "orders:write": "工单推进", "schedule:write": "排程调整", "quality:write": "质量处理",
+    "inventory:write": "库存操作", "config:read": "配置查看", "config:write": "配置维护",
+    "dashboard:read": "经营看板", "approval:write": "审批放行", "audit:read": "审计查看",
+    "execution:write": "现场报工", "mobile:write": "移动任务", "routes:read": "工艺查看",
+    "workflow:write": "流程处理", "integrations:read": "接口查看", "integrations:write": "接口维护",
     "users:read": "员工查看",
   };
   const permissionKeys = Array.from(new Set(snapshot.users.flatMap((user) => user.permissions)));
@@ -1304,7 +1726,7 @@ function AdminCenter({ snapshot }: { snapshot: Snapshot }) {
         <div>
           <p className="eyebrow">Tenant Admin Console</p>
           <h2>企业租户、员工、角色与操作权限</h2>
-          <p>一家制造企业上线 MES 后，后台不是摆设。IT/实施负责人需要管理公司组织、工厂范围、岗位角色、可操作模块、接口权限和审计追踪，保证每个员工只看到、只操作自己该负责的生产对象。</p>
+          <p>一家制造企业上线 MES 后，后台不是摆设。IT/实施负责人需要管理公司组织、工厂范围、岗位角色、可操作模块、接口权限和审计追踪。</p>
         </div>
         <div className="admin-tenant-card">
           <Factory size={22} />
@@ -1361,9 +1783,14 @@ function AdminCenter({ snapshot }: { snapshot: Snapshot }) {
       <section className="split">
         <div className="panel">
           <SectionTitle icon={FileClock} title="最近审计" />
-          <div className="audit-list">
+          <div className="audit-list enhanced">
             {snapshot.auditLogs.slice(0, 8).map((log) => (
-              <span key={log.id}>{log.createdAt} / {log.actor} / {log.action} / {log.entity}</span>
+              <div key={log.id} className="audit-row">
+                <span className="audit-time">{log.createdAt}</span>
+                <strong className="audit-actor">{log.actor}</strong>
+                <span className="audit-action">{log.action}</span>
+                <code className="audit-entity">{log.entity}</code>
+              </div>
             ))}
           </div>
         </div>
@@ -1381,16 +1808,23 @@ function AdminCenter({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   SHARED COMPONENTS
+   ═══════════════════════════════════════════════════════════════════ */
+
 function EmployeeCard({ user }: { user: Employee }) {
   return (
     <article className="employee-card">
-      <div>
-        <strong>{user.name}</strong>
-        <span>{user.role}</span>
+      <div className="employee-header">
+        <div className="avatar">{user.name.charAt(0)}</div>
+        <div>
+          <strong>{user.name}</strong>
+          <span>{user.role}</span>
+        </div>
       </div>
       <p>{user.department} / {user.plant}</p>
-      <em>{user.status} / {user.lastActive}</em>
-      <div>
+      <em className={user.status === "在线" ? "online" : ""}>{user.status} / {user.lastActive}</em>
+      <div className="permission-tags">
         {user.permissions.slice(0, 4).map((permission) => <b key={permission}>{permission}</b>)}
       </div>
     </article>
@@ -1406,17 +1840,15 @@ function PackageCard({ item, busy, onPlan }: { item: CommercialPackage; busy: st
       <strong>{item.priceModel}</strong>
       <span>{item.scope}</span>
       <em>{item.roi}</em>
-      <button className="small-action" type="button" onClick={() => onPlan(item.id)} disabled={busy === item.id}>
-        生成方案
-      </button>
+      <button className="small-action" type="button" onClick={() => onPlan(item.id)} disabled={busy === item.id}>生成方案</button>
     </article>
   );
 }
 
 function RecommendationCard({ item, busy, onAccept }: { item: Recommendation; busy: string | null; onAccept: (id: string) => void }) {
   return (
-    <article className="recommendation-card">
-      <span className={`severity ${item.severity}`}>{item.severity}</span>
+    <article className={`recommendation-card severity-${item.severity}`}>
+      <span className={`severity-badge ${item.severity}`}>{item.severity}</span>
       <div>
         <strong>{item.title}</strong>
         <p>{item.body}</p>
@@ -1432,14 +1864,14 @@ function RecommendationCard({ item, busy, onAccept }: { item: Recommendation; bu
 function IssueCard({ item, busy, onClose }: { item: QualityIssue; busy: string | null; onClose: (id: string) => void }) {
   return (
     <article className="work-card">
-      <div>
+      <div className="work-card-info">
         <strong>{item.id} · {item.batch}</strong>
-        <span>{item.source} / {item.owner} / 根因：{item.rootCause}</span>
+        <span>{item.source} / {item.owner} / 根因: {item.rootCause}</span>
       </div>
-      <span className={`severity ${item.severity}`}>{item.severity}</span>
+      <span className={`severity-badge ${item.severity}`}>{item.severity}</span>
       <StatusPill value={item.status} />
       <button className="small-action" type="button" onClick={() => onClose(item.id)} disabled={busy === item.id || item.status === "已关闭"}>
-        关闭
+        {item.status === "已关闭" ? "已关闭" : "关闭"}
       </button>
     </article>
   );
@@ -1448,10 +1880,14 @@ function IssueCard({ item, busy, onClose }: { item: QualityIssue; busy: string |
 function MaterialCard({ item, busy, onReplenish }: { item: Material; busy: string | null; onReplenish: (id: string) => void }) {
   const risk = item.stock < item.safeStock;
   return (
-    <article className="work-card">
-      <div>
+    <article className={`work-card ${risk ? "at-risk" : ""}`}>
+      <div className="work-card-info">
         <strong>{item.id} · {item.name}</strong>
         <span>{item.location} / 关联 {item.linkedOrders.join("、")}</span>
+        <div className="stock-indicator">
+          <span>库存: {item.stock}</span>
+          <span>安全: {item.safeStock}</span>
+        </div>
       </div>
       <Progress value={Math.min(100, Math.round((item.stock / item.safeStock) * 100))} />
       <StatusPill value={risk ? "风险" : "正常"} />
@@ -1465,14 +1901,12 @@ function MaterialCard({ item, busy, onReplenish }: { item: Material; busy: strin
 function IntegrationCard({ item, busy, onSync }: { item: Integration; busy: string | null; onSync: (id: string) => void }) {
   return (
     <article className="work-card">
-      <div>
+      <div className="work-card-info">
         <strong>{item.name}</strong>
         <span>{item.type} / 最近同步 {item.lastSync}</span>
       </div>
       <StatusPill value={item.status === "已连接" ? "正常" : item.status === "告警" ? "风险" : "阻塞"} />
-      <button className="small-action" type="button" onClick={() => onSync(item.id)} disabled={busy === item.id}>
-        同步
-      </button>
+      <button className="small-action" type="button" onClick={() => onSync(item.id)} disabled={busy === item.id}>同步</button>
     </article>
   );
 }
@@ -1481,11 +1915,11 @@ function EventPanel({ events }: { events: EventItem[] }) {
   return (
     <div className="panel event-panel">
       <SectionTitle icon={FileClock} title="实时事件流" />
-      <ol>
+      <ol className="event-list">
         {events.slice(0, 8).map((event) => (
-          <li key={event.id}>
-            <span>{event.time}</span>
-            <strong>{event.type}</strong>
+          <li key={event.id} className={`event-item type-${event.type}`}>
+            <span className="event-time">{event.time}</span>
+            <span className="event-type">{event.type}</span>
             <p>{event.message}</p>
           </li>
         ))}
@@ -1513,13 +1947,21 @@ function SectionTitle({ icon: Icon, title }: { icon: typeof Factory; title: stri
 }
 
 function Progress({ value }: { value: number }) {
-  return <span className="progress"><i style={{ width: `${Math.max(4, Math.min(100, value))}%` }} /></span>;
+  return (
+    <span className="progress">
+      <i style={{ width: `${Math.max(4, Math.min(100, value))}%` }} />
+    </span>
+  );
 }
 
 function StatusPill({ value }: { value: string }) {
-  const className = value === "正常" || value === "完成" || value === "已连接" ? "ok" : value === "风险" || value === "告警" ? "warn" : "risk";
+  const className = value === "正常" || value === "完成" || value === "已连接" ? "ok"
+    : value === "风险" || value === "告警" || value === "待处理" || value === "处理中" ? "warn"
+    : "risk";
   return <span className={`status-pill ${className}`}>{value}</span>;
 }
+
+/* ─── Utilities ─────────────────────────────────────────────────── */
 
 function filterOrders(orders: WorkOrder[], query: string) {
   const keyword = query.trim().toLowerCase();
@@ -1555,6 +1997,14 @@ function actionShape() {
     completeMobile: (_id: string) => undefined,
     verifyMasterData: (_id: string) => undefined,
     syncIntegration: (_id: string) => undefined,
+    publishRoute: (_id: string) => undefined,
+    publishKanban: (_id: string) => undefined,
+    equipCheck: (_id: string) => undefined,
+    resolveInsight: (_id: string) => undefined,
+    toggleRule: (_id: string) => undefined,
+    applyTemplate: (_id: string) => undefined,
+    advanceWorkflow: (_id: string) => undefined,
+    advanceImpl: (_id: string) => undefined,
     reset: () => undefined,
     exception: () => undefined,
   };
