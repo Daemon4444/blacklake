@@ -4,7 +4,7 @@
 
 - 地址: `root@39.106.200.97`
 - 项目路径: `/root/blacklake`
-- 数据库: PostgreSQL 13, user=blacklake, password=REDACTED, db=blacklake_db
+- 数据库: PostgreSQL 13, user=blacklake, password=<见部署环境变量>, db=blacklake_db
 - Node: 22, PM2 管理进程, nginx 反向代理 (port 80 → 8787)
 - 注意: 本机不支持 scp，文件传输用 `base64 -i file | ssh root@39.106.200.97 "base64 -d > target"` 或直接 ssh 写入
 
