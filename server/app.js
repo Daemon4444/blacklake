@@ -13,7 +13,7 @@ const PORT = Number(process.env.PORT || 8787);
 const distDir = resolve("dist");
 
 await app.register(cors, { origin: true, credentials: true });
-await app.register(fastifyJwt, { secret: process.env.JWT_SECRET || "REDACTED" });
+await app.register(fastifyJwt, { secret: process.env.JWT_SECRET });
 
 // SSE clients
 const sseClients = new Set();
